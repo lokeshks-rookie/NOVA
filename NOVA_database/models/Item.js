@@ -80,9 +80,17 @@ const itemSchema = new mongoose.Schema(
       type: [String], // up to 4 photo URLs
       default: [],
     },
+
+    // ── AI Moderation metadata ─────────────────────────────────────────
+    aiModeration: {
+      isFlagged: { type: Boolean, default: false },
+      reason: { type: String, default: null },
+      confidence: { type: Number, default: 0 },
+    },
+
     status: {
       type: String,
-      enum: ["open", "pending_claim", "claimed", "closed"],
+      enum: ["open", "pending_claim", "claimed", "closed", "pending_verification"],
       default: "open",
     },
     referenceNumber: {

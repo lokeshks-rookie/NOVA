@@ -38,22 +38,53 @@ export const createClaim = async (req, res, next) => {
         .json({ success: false, message: "You cannot claim your own reported item" });
     }
 
+    let status = "pending";
+    let rejectReason = null;
+    let pickupPin = null;
+    let pickupInfo = null;
+
+    // Automatic verification based on the challenge answer
+    if (item.challengeQuestions && item.challengeQuestions.length > 0) {
+      const expectedAnswer = item.challengeQuestions[0].answer.toLowerCase().trim();
+      const providedAnswerObj = answers && answers.length > 0 ? answers[0] : null;
+      const providedAnswer = providedAnswerObj && providedAnswerObj.answer ? providedAnswerObj.answer.toLowerCase().trim() : "";
+
+      if (providedAnswer === expectedAnswer) {
+        status = "approved";
+        pickupPin = Math.floor(1000 + Math.random() * 9000).toString();
+        pickupInfo = `Collect from Lost & Found desk, Main Block. PIN: ${pickupPin}`;
+      } else {
+        status = "rejected";
+        rejectReason = "Answer does not match verification";
+      }
+    }
+
     const claim = await Claim.create({
       item: itemId,
       claimant: req.user._id,
       answers: answers || [],
       proofImageUrl: proofImageUrl || null,
+      status,
+      pickupPin,
+      pickupInfo,
+      rejectReason,
     });
 
-    // Update item status
-    await Item.findByIdAndUpdate(itemId, { status: "pending_claim" });
+    // Update item status based on automatic verification
+    if (status === "approved") {
+      await Item.findByIdAndUpdate(itemId, { status: "claimed" });
+    } else if (status === "pending") {
+      await Item.findByIdAndUpdate(itemId, { status: "pending_claim" });
+    }
 
     // Notify the reporter
     await Notification.create({
       user: item.reportedBy,
       type: "claim",
-      title: "Someone has claimed your item",
-      body: `A claim has been submitted for "${item.title}". It is now under review.`,
+      title: status === "approved" ? "Your item has been successfully claimed!" : "Someone attempted to claim your item",
+      body: status === "approved" 
+        ? `A claim for "${item.title}" was automatically approved because the correct answer was provided.`
+        : `A claim was submitted for "${item.title}". ${status === 'rejected' ? 'It was automatically rejected due to an incorrect answer.' : 'It is now under review.'}`,
       relatedItem: item._id,
       relatedClaim: claim._id,
     });

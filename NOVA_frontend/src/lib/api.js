@@ -42,11 +42,38 @@ async function request(method, path, body = null) {
   return data
 }
 
+// Separate method for multipart/form-data uploads (no JSON Content-Type)
+async function uploadRequest(path, formData) {
+  const token = localStorage.getItem("cf_token")
+
+  const headers = {}
+  if (token) headers["Authorization"] = `Bearer ${token}`
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    headers,
+    body: formData,
+  })
+
+  const data = await res.json().catch(() => null)
+
+  if (!res.ok) {
+    throw new ApiError(
+      data?.message || `Upload failed (${res.status})`,
+      res.status,
+      data,
+    )
+  }
+
+  return data
+}
+
 const api = {
   get: (path) => request("GET", path),
   post: (path, body) => request("POST", path, body),
   patch: (path, body) => request("PATCH", path, body),
   delete: (path) => request("DELETE", path),
+  upload: (path, formData) => uploadRequest(path, formData),
 }
 
 export default api

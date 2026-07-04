@@ -3,6 +3,7 @@
 
 import { Item, AuditLog } from "../../NOVA_database/models/index.js";
 import { checkAlertsOnNewItem } from "../utils/alertMatcher.js";
+import { validateReportIntegrity, filterSearchItems } from "../utils/gemini.js";
 
 // @desc    Report a new lost/found item
 // @route   POST /api/items
@@ -20,32 +21,49 @@ export const createItem = async (req, res, next) => {
       challengeQuestions,
     } = req.body;
 
+    // Call Gemini AI integrity validation
+    const aiCheck = await validateReportIntegrity(
+      title,
+      description,
+      category,
+      type,
+      imageUrls || []
+    );
+
     const item = await Item.create({
       type,
       category,
       title,
       description,
       location,
-      landmark,
-      date,
+      landmark: landmark || null,
+      date: date || new Date(),
       imageUrls: imageUrls || [],
       challengeQuestions: challengeQuestions || [],
       reportedBy: req.user._id,
+      status: aiCheck.isFlagged ? "pending_verification" : "open",
+      aiModeration: {
+        isFlagged: aiCheck.isFlagged,
+        reason: aiCheck.reason,
+        confidence: aiCheck.confidence || 0,
+      },
     });
 
     // Audit log
     await AuditLog.create({
-      action: "item_created",
+      action: "item_reported",
       actor: req.user._id,
       target: item._id,
       targetModel: "Item",
-      metadata: { type, category, location },
+      metadata: { type, category, location, aiFlagged: aiCheck.isFlagged },
     });
 
-    // Fire-and-forget: check saved search alerts
-    checkAlertsOnNewItem(item).catch((err) =>
-      console.error("Alert check failed:", err.message)
-    );
+    // Fire-and-forget: check saved search alerts (only if not flagged by AI)
+    if (!aiCheck.isFlagged) {
+      checkAlertsOnNewItem(item).catch((err) =>
+        console.error("Alert check failed:", err.message)
+      );
+    }
 
     res.status(201).json({ success: true, data: item });
   } catch (error) {
@@ -229,6 +247,44 @@ export const deleteItem = async (req, res, next) => {
     });
 
     res.json({ success: true, message: "Item deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Semantic AI Search
+// @route   GET /api/items/ai-search
+export const aiSearchItems = async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    if (!q || !q.trim()) {
+      return res.status(400).json({ success: false, message: "Query parameter 'q' is required." });
+    }
+
+    // Fetch all open items
+    const dbItems = await Item.find({ status: "open" }).populate("reportedBy", "name email role");
+
+    // Perform semantic filtering and ranking via Gemini
+    const matches = await filterSearchItems(q, dbItems);
+
+    if (!matches || matches.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const matchedItemIds = matches.map((m) => m.id);
+    const scoreMap = new Map(matches.map((m) => [m.id, m.score]));
+
+    // Construct matched items list with relevance score
+    const filteredItems = dbItems
+      .filter((item) => matchedItemIds.includes(item._id.toString()))
+      .map((item) => {
+        const itemObj = item.toObject();
+        itemObj.relevanceScore = scoreMap.get(item._id.toString());
+        return itemObj;
+      })
+      .sort((a, b) => b.relevanceScore - a.relevanceScore);
+
+    res.json({ success: true, data: filteredItems });
   } catch (error) {
     next(error);
   }

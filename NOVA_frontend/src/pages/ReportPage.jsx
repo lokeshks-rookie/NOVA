@@ -45,7 +45,7 @@ export default function ReportPage() {
   const handlePhotoDrop = useCallback((e) => {
     e.preventDefault()
     const files = Array.from(e.dataTransfer?.files || e.target.files || []).slice(0, 4 - photos.length)
-    const newPhotos = files.map((f) => ({ name: f.name, url: URL.createObjectURL(f) }))
+    const newPhotos = files.map((f) => ({ name: f.name, url: URL.createObjectURL(f), file: f }))
     setPhotos((prev) => [...prev, ...newPhotos].slice(0, 4))
   }, [photos.length])
 
@@ -54,8 +54,19 @@ export default function ReportPage() {
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
+      // Step 1: Upload photos to Cloudinary (if any)
+      let imageUrls = []
+      const filesToUpload = photos.filter((p) => p.file)
+      if (filesToUpload.length > 0) {
+        const formData = new FormData()
+        filesToUpload.forEach((p) => formData.append("images", p.file))
+        const uploadRes = await api.upload("/uploads", formData)
+        imageUrls = uploadRes.data || []
+      }
+
+      // Step 2: Create the item with Cloudinary URLs
       const dateTime = date && time ? `${date}T${time}:00` : date ? `${date}T00:00:00` : new Date().toISOString()
-      await api.post("/items", {
+      const res = await api.post("/items", {
         type,
         category,
         title,
@@ -63,13 +74,23 @@ export default function ReportPage() {
         location,
         landmark: landmark || undefined,
         date: dateTime,
-        imageUrls: photos.map((p) => p.url),
+        imageUrls,
         challengeQuestions: challengeQ && challengeA
           ? [{ question: challengeQ, answer: challengeA }]
           : [],
       })
+
+      if (res?.data?.data?.aiModeration?.isFlagged || res?.data?.aiModeration?.isFlagged) {
+        const reason = res?.data?.data?.aiModeration?.reason || res?.data?.aiModeration?.reason;
+        addToast({
+          variant: "warning",
+          title: "Flagged for AI verification",
+          message: `Your report is being reviewed: ${reason}`,
+        })
+      } else {
+        addToast({ variant: "success", title: "Report submitted", message: `Reference: ${refNum}` })
+      }
       setSubmitted(true)
-      addToast({ variant: "success", title: "Report submitted", message: `Reference: ${refNum}` })
     } catch (err) {
       addToast({ variant: "error", title: "Submission failed", message: err.message || "Please try again." })
     } finally {
@@ -244,20 +265,19 @@ export default function ReportPage() {
                 <div className="mt-4 space-y-4">
                   <div>
                     <Label htmlFor="rp-cq">Identifying detail</Label>
-                    <Input id="rp-cq" value={challengeQ} onChange={(e) => setChallengeQ(e.target.value)} placeholder="e.g. What sticker is on the back of the case?" />
+                    <Input id="rp-cq" autoComplete="off" value={challengeQ} onChange={(e) => setChallengeQ(e.target.value)} placeholder="e.g. What sticker is on the back of the case?" />
                   </div>
                   <div>
                     <Label htmlFor="rp-ca">Answer</Label>
                     <div className="relative">
                       <Input
                         id="rp-ca"
-                        type="password"
+                        type="text"
+                        autoComplete="off"
                         value={challengeA}
                         onChange={(e) => setChallengeA(e.target.value)}
-                        placeholder="••••••••"
-                        className="pr-8"
+                        placeholder="Enter the correct answer..."
                       />
-                      <Lock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cf-muted" />
                     </div>
                     <p className="mt-1.5 text-xs text-cf-muted">This answer will not be shown publicly.</p>
                   </div>

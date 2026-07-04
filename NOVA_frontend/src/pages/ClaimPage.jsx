@@ -33,7 +33,7 @@ export default function ClaimPage() {
         setItem({
           id: d._id || d.id,
           title: d.title,
-          challengeQuestion: d.challengeQuestions?.[0] || null,
+          challengeQuestion: d.challengeQuestions?.[0]?.question || null,
           imageUrl: d.imageUrls?.[0] || null,
         })
       })
@@ -61,17 +61,26 @@ export default function ClaimPage() {
 
   const handleProof = (e) => {
     const file = e.target.files?.[0]
-    if (file) setProofPhoto({ name: file.name, url: URL.createObjectURL(file) })
+    if (file) setProofPhoto({ name: file.name, url: URL.createObjectURL(file), file: file })
   }
 
   const handleSubmitClaim = async () => {
     setSubmitting(true)
     try {
+      let proofImageUrl = null
+      if (proofPhoto?.file) {
+        const formData = new FormData()
+        formData.append("images", proofPhoto.file)
+        const uploadRes = await api.upload("/uploads", formData)
+        proofImageUrl = uploadRes.data?.[0] || null
+      }
+
       await api.post("/claims", {
         itemId: item.id,
         answers: item.challengeQuestion
           ? [{ question: item.challengeQuestion, answer: answer }]
           : [],
+        proofImageUrl,
       })
       setStep(2)
       addToast({ variant: "success", title: "Claim submitted", message: `Reference: ${refNum}` })
