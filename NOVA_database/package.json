@@ -1,0 +1,9 @@
+{
+  "name": "nova-database",
+  "version": "1.0.0",
+  "description": "NOVA database connection and models",
+  "type": "module",
+  "dependencies": {
+    "mongoose": "^8.4.0"
+  }
+}
