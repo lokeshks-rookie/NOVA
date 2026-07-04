@@ -45,17 +45,30 @@ export default function ReportPage() {
   const handlePhotoDrop = useCallback((e) => {
     e.preventDefault()
     const files = Array.from(e.dataTransfer?.files || e.target.files || []).slice(0, 4 - photos.length)
-    const newPhotos = files.map((f) => ({ name: f.name, url: URL.createObjectURL(f) }))
+    const newPhotos = files.map((f) => ({ name: f.name, url: URL.createObjectURL(f), file: f }))
     setPhotos((prev) => [...prev, ...newPhotos].slice(0, 4))
   }, [photos.length])
 
   const removePhoto = (idx) => setPhotos((prev) => prev.filter((_, i) => i !== idx))
 
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = (err) => reject(err)
+    })
+  }
+
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
+      const base64Photos = await Promise.all(
+        photos.map((p) => (p.file ? fileToBase64(p.file) : p.url))
+      )
+
       const dateTime = date && time ? `${date}T${time}:00` : date ? `${date}T00:00:00` : new Date().toISOString()
-      await api.post("/items", {
+      const res = await api.post("/items", {
         type,
         category,
         title,
@@ -63,13 +76,22 @@ export default function ReportPage() {
         location,
         landmark: landmark || undefined,
         date: dateTime,
-        imageUrls: photos.map((p) => p.url),
+        imageUrls: base64Photos,
         challengeQuestions: challengeQ && challengeA
           ? [{ question: challengeQ, answer: challengeA }]
           : [],
       })
+
+      if (res?.data?.aiModeration?.isFlagged) {
+        addToast({
+          variant: "warning",
+          title: "Flagged for AI verification",
+          message: `Your report is being reviewed: ${res.data.aiModeration.reason}`,
+        })
+      } else {
+        addToast({ variant: "success", title: "Report submitted", message: `Reference: ${refNum}` })
+      }
       setSubmitted(true)
-      addToast({ variant: "success", title: "Report submitted", message: `Reference: ${refNum}` })
     } catch (err) {
       addToast({ variant: "error", title: "Submission failed", message: err.message || "Please try again." })
     } finally {

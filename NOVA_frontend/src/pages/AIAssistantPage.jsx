@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/Button"
 import { useApp } from "@/context/AppContext"
 import { mockItems, aiSuggestedPrompts } from "@/data/mock"
 import { cn } from "@/lib/utils"
+import api from "@/lib/api"
 
-// Simple mock AI response generator
+// Simple mock AI response generator (fallback)
 function generateResponse(input) {
   const q = input.toLowerCase()
 
@@ -47,22 +48,39 @@ export default function AIAssistantPage() {
     scrollToBottom()
   }, [messages, isTyping])
 
-  const sendMessage = (text) => {
+  const sendMessage = async (text) => {
     const userMsg = { id: Date.now(), role: "user", content: text }
-    setMessages((prev) => [...prev, userMsg])
+    const updatedMessages = [...messages, userMsg]
+    setMessages(updatedMessages)
     setInput("")
     setIsTyping(true)
 
-    // Simulate AI thinking delay
-    setTimeout(() => {
+    try {
+      const res = await api.post("/ai/chat", {
+        messages: updatedMessages.map(({ role, content }) => ({ role, content }))
+      })
+
       const aiMsg = {
         id: Date.now() + 1,
         role: "assistant",
-        content: generateResponse(text),
+        content: res.reply || "No response received from Assistant.",
       }
       setMessages((prev) => [...prev, aiMsg])
+    } catch (err) {
+      console.error(err)
+      let errorContent = "Sorry, I had trouble connecting to the server. Please check your connection and try again."
+      if (err.status === 401) {
+        errorContent = "Your session has expired or is invalid. Please click 'Sign out' at the bottom left and sign back in to refresh your connection."
+      }
+      const errorMsg = {
+        id: Date.now() + 1,
+        role: "assistant",
+        content: errorContent
+      }
+      setMessages((prev) => [...prev, errorMsg])
+    } finally {
       setIsTyping(false)
-    }, 1200 + Math.random() * 800)
+    }
   }
 
   const handleSubmit = (e) => {

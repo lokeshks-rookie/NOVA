@@ -14,6 +14,7 @@ import itemRoutes from "./routes/itemRoutes.js";
 import claimRoutes from "./routes/claimRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import searchAlertRoutes from "./routes/searchAlertRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -35,6 +36,7 @@ app.use("/api/items", itemRoutes);
 app.use("/api/claims", claimRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/search-alerts", searchAlertRoutes);
+app.use("/api/ai", aiRoutes);
 
 // ─── Health Check ──────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {

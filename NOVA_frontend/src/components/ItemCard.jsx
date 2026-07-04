@@ -25,6 +25,11 @@ export function ItemCard({ item }) {
         <div className="absolute left-3 top-3">
           <StatusBadge status={item.type} />
         </div>
+        {item.relevanceScore !== undefined && item.relevanceScore !== null && (
+          <div className="absolute right-3 top-3 rounded-full bg-cf-black/75 backdrop-blur-sm px-2.5 py-1 text-[11px] font-bold text-cf-yellow">
+            ✨ {item.relevanceScore}% Match
+          </div>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-center gap-2">

@@ -27,7 +27,7 @@ export const createAlert = async (req, res, next) => {
     const alert = await SearchAlert.create({
       user: req.user._id,
       queryText: searchText,
-      category: category || null,
+      category: (category && category !== "all") ? category : null,
       contactMethod: contactMethod || "email",
     });
 

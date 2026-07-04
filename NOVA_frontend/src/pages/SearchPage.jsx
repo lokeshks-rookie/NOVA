@@ -27,6 +27,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [results, setResults] = useState([])
+  const [aiSearch, setAiSearch] = useState(true)
   const debounceRef = useRef(null)
 
   // Debounced server-side search
@@ -37,20 +38,26 @@ export default function SearchPage() {
       fetchItems()
     }, 400)
     return () => clearTimeout(debounceRef.current)
-  }, [query, statusFilter, categoryFilter, dateFrom, dateTo, locationFilter])
+  }, [query, statusFilter, categoryFilter, dateFrom, dateTo, locationFilter, aiSearch])
 
   async function fetchItems() {
     try {
-      const params = new URLSearchParams()
-      if (query.trim()) params.set("q", query.trim())
-      if (statusFilter !== "all") params.set("type", statusFilter)
-      if (categoryFilter) params.set("category", categoryFilter)
-      if (locationFilter) params.set("location", locationFilter)
-      if (dateFrom) params.set("dateFrom", dateFrom)
-      if (dateTo) params.set("dateTo", dateTo)
-      params.set("limit", "50")
+      let res
+      if (aiSearch && query.trim()) {
+        res = await api.get(`/items/ai-search?q=${encodeURIComponent(query.trim())}`)
+      } else {
+        const params = new URLSearchParams()
+        if (query.trim()) params.set("q", query.trim())
+        if (statusFilter !== "all") params.set("type", statusFilter)
+        if (categoryFilter) params.set("category", categoryFilter)
+        if (locationFilter) params.set("location", locationFilter)
+        if (dateFrom) params.set("dateFrom", dateFrom)
+        if (dateTo) params.set("dateTo", dateTo)
+        params.set("limit", "50")
 
-      const res = await api.get(`/items?${params.toString()}`)
+        res = await api.get(`/items?${params.toString()}`)
+      }
+
       setResults(
         (res?.data || []).map((item) => ({
           id: item._id || item.id,
@@ -64,6 +71,7 @@ export default function SearchPage() {
           imageUrl: item.imageUrls?.[0] || null,
           reportedBy: item.reportedBy,
           challengeQuestion: item.challengeQuestions?.[0] || null,
+          relevanceScore: item.relevanceScore || null,
         }))
       )
     } catch (err) {
@@ -115,9 +123,18 @@ export default function SearchPage() {
               className="cf-focus-ring w-full rounded-full border border-cf-line bg-cf-white py-3.5 pl-12 pr-28 text-[15px] text-cf-black placeholder:text-cf-muted"
             />
             <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-2">
-              <span className="hidden rounded-full bg-cf-yellow px-2.5 py-1 text-[11px] font-semibold text-cf-black sm:inline">
-                AI SEARCH
-              </span>
+              <button
+                type="button"
+                onClick={() => setAiSearch(!aiSearch)}
+                className={cn(
+                  "hidden rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wider transition-colors sm:inline",
+                  aiSearch
+                    ? "bg-cf-yellow text-cf-black hover:bg-cf-yellow/90"
+                    : "bg-cf-cream border border-cf-line text-cf-muted hover:text-cf-black hover:bg-cf-white"
+                )}
+              >
+                {aiSearch ? "✨ AI SEARCH" : "CLASSIC SEARCH"}
+              </button>
               <button type="button" aria-label="Voice search (coming soon)" className="p-1 text-cf-muted">
                 <Mic className="h-5 w-5" />
               </button>

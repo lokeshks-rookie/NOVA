@@ -7,12 +7,16 @@ import {
   updateItem,
   getItemStats,
   deleteItem,
+  aiSearchItems,
 } from "../controllers/itemController.js";
 
 const router = Router();
 
 // GET  /api/items/stats  → dashboard stats (must be before /:id)
 router.get("/stats", getItemStats);
+
+// GET  /api/items/ai-search → semantic AI search (must be before /:id)
+router.get("/ai-search", verifyToken, aiSearchItems);
 
 // GET  /api/items         → list/search all items
 router.get("/", getItems);
