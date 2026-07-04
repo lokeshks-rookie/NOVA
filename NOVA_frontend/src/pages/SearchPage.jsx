@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { Search as SearchIcon, Mic, SlidersHorizontal, X } from "lucide-react"
 import { ItemCard } from "@/components/ItemCard"
@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/Button"
 import { Input, Label, Select } from "@/components/ui/Field"
 import { ItemCardSkeleton } from "@/components/ui/Skeleton"
 import { useApp } from "@/context/AppContext"
-import { mockItems, CATEGORIES, LOCATIONS } from "@/data/mock"
+import { CATEGORIES, LOCATIONS } from "@/data/mock"
 import { cn } from "@/lib/utils"
+import api from "@/lib/api"
 
 export default function SearchPage() {
   const { addToast, addSavedSearch } = useApp()
@@ -18,7 +19,6 @@ export default function SearchPage() {
   const initialQ = searchParams.get("q") || ""
 
   const [query, setQuery] = useState(initialQ)
-  const [debouncedQuery, setDebouncedQuery] = useState(initialQ)
   const [statusFilter, setStatusFilter] = useState("all")
   const [categoryFilter, setCategoryFilter] = useState(null)
   const [dateFrom, setDateFrom] = useState("")
@@ -26,53 +26,53 @@ export default function SearchPage() {
   const [locationFilter, setLocationFilter] = useState("")
   const [loading, setLoading] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [results, setResults] = useState([])
   const debounceRef = useRef(null)
 
-  // Debounced search — simulate 400ms delay
+  // Debounced server-side search
   useEffect(() => {
     setLoading(true)
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      setDebouncedQuery(query)
-      setLoading(false)
+      fetchItems()
     }, 400)
     return () => clearTimeout(debounceRef.current)
-  }, [query])
+  }, [query, statusFilter, categoryFilter, dateFrom, dateTo, locationFilter])
 
-  const results = useMemo(() => {
-    let items = [...mockItems]
+  async function fetchItems() {
+    try {
+      const params = new URLSearchParams()
+      if (query.trim()) params.set("q", query.trim())
+      if (statusFilter !== "all") params.set("type", statusFilter)
+      if (categoryFilter) params.set("category", categoryFilter)
+      if (locationFilter) params.set("location", locationFilter)
+      if (dateFrom) params.set("dateFrom", dateFrom)
+      if (dateTo) params.set("dateTo", dateTo)
+      params.set("limit", "50")
 
-    if (debouncedQuery.trim()) {
-      const q = debouncedQuery.toLowerCase()
-      items = items.filter(
-        (item) =>
-          item.title.toLowerCase().includes(q) ||
-          item.description.toLowerCase().includes(q) ||
-          item.category.toLowerCase().includes(q),
+      const res = await api.get(`/items?${params.toString()}`)
+      setResults(
+        (res?.data || []).map((item) => ({
+          id: item._id || item.id,
+          type: item.type,
+          category: item.category,
+          title: item.title,
+          description: item.description,
+          location: item.location,
+          date: item.date || item.createdAt,
+          status: item.status,
+          imageUrl: item.imageUrls?.[0] || null,
+          reportedBy: item.reportedBy,
+          challengeQuestion: item.challengeQuestions?.[0] || null,
+        }))
       )
+    } catch (err) {
+      console.error("Search error:", err)
+      setResults([])
+    } finally {
+      setLoading(false)
     }
-
-    if (statusFilter !== "all") {
-      items = items.filter((item) => item.type === statusFilter)
-    }
-
-    if (categoryFilter) {
-      items = items.filter((item) => item.category === categoryFilter)
-    }
-
-    if (dateFrom) {
-      items = items.filter((item) => item.date >= dateFrom)
-    }
-    if (dateTo) {
-      items = items.filter((item) => item.date <= dateTo + "T23:59:59")
-    }
-
-    if (locationFilter) {
-      items = items.filter((item) => item.location === locationFilter)
-    }
-
-    return items
-  }, [debouncedQuery, statusFilter, categoryFilter, dateFrom, dateTo, locationFilter])
+  }
 
   const clearAll = () => {
     setQuery("")

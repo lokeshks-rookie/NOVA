@@ -51,7 +51,7 @@ export function ProcessFrame() {
               delay={0.1 * (idx + 1)}
               className="relative flex flex-col justify-between border-2 border-cf-yellow bg-cf-yellow p-8 sm:p-10 transition-transform duration-300 hover:-translate-y-2"
               style={{
-                boxShadow: "8px 8px 0px 0px var(--color-cf-white)",
+                boxShadow: "8px 8px 0px 0px #ffffff",
               }}
             >
               <div>

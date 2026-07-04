@@ -79,7 +79,7 @@ export function AppLayout({ children }) {
           className="fixed z-50 left-3 top-3 hidden h-9 w-9 items-center justify-center rounded-lg bg-cf-white border border-cf-line shadow-sm transition-all duration-300 hover:bg-cf-cream lg:flex"
           aria-label="Open sidebar"
         >
-          <img src="/icons/sidebar-open.png" alt="" className="h-5 w-5" />
+          <img src="/icons/sidebar-open.png" alt="" className="h-5 w-5 dark:invert" />
         </button>
       )}
 
@@ -98,7 +98,7 @@ export function AppLayout({ children }) {
             className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-cf-cream"
             aria-label="Close sidebar"
           >
-            <img src="/icons/sidebar-close.png" alt="" className="h-5 w-5" />
+            <img src="/icons/sidebar-close.png" alt="" className="h-5 w-5 dark:invert" />
           </button>
         </div>
 

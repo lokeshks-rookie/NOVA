@@ -13,6 +13,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import User from "../../NOVA_database/models/User.js";
+import { verifyToken } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -225,6 +226,166 @@ router.get("/google/callback", async (req, res) => {
     }
 
     res.redirect(`${CLIENT_URL}/login?error=google_auth_failed`);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════
+//  POST /api/auth/signup
+//  Registers a new user via local email/password.
+// ════════════════════════════════════════════════════════════════════
+router.post("/signup", async (req, res) => {
+  try {
+    const {
+      role,
+      fullName,
+      email,
+      mobile,
+      department,
+      password,
+      studentId,
+      yearOfStudy,
+      employeeId,
+    } = req.body;
+
+    // Validate essential fields
+    if (!fullName || !email || !password || !role) {
+      return res.status(400).json({ success: false, message: "Missing required fields." });
+    }
+
+    const emailLower = email.toLowerCase();
+    
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: emailLower });
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: "Email is already registered." });
+    }
+
+    // Create new user (password is hashed automatically by pre-save hook)
+    const newUser = await User.create({
+      name: fullName,
+      email: emailLower,
+      password,
+      role,
+      authProvider: "local",
+      mobile: mobile || null,
+      department: department || null,
+      year: yearOfStudy || null,
+      idNumber: studentId || employeeId || null,
+    });
+
+    // Issue JWT
+    const token = signToken(newUser);
+    const userPayload = buildUserPayload(newUser);
+
+    res.cookie("cf_token", token, {
+      httpOnly: true,
+      secure: isProduction(),
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    res.status(201).json({ success: true, token, user: userPayload });
+  } catch (error) {
+    console.error("❌  Signup error:", error.message);
+    res.status(500).json({ success: false, message: "Server error during registration." });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════
+//  POST /api/auth/login
+//  Authenticates a user via local email/password.
+// ════════════════════════════════════════════════════════════════════
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Email and password are required." });
+    }
+
+    // Find user and explicitly select password (which is select: false by default)
+    const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
+    
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Invalid credentials or user doesn't exist." });
+    }
+
+    // If password doesn't exist (e.g. Google-only account), let them set it now
+    if (!user.password) {
+      user.password = password;
+      await user.save();
+    }
+
+    // Verify password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid credentials." });
+    }
+
+    // Issue JWT
+    const token = signToken(user);
+    const userPayload = buildUserPayload(user);
+
+    res.cookie("cf_token", token, {
+      httpOnly: true,
+      secure: isProduction(),
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    res.status(200).json({ success: true, token, user: userPayload });
+  } catch (error) {
+    console.error("❌  Login error:", error.message);
+    res.status(500).json({ success: false, message: "Server error during login." });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════
+//  GET /api/auth/me
+//  Returns the authenticated user's profile. Used by the frontend to
+//  rehydrate user state on page refresh.
+// ════════════════════════════════════════════════════════════════════
+router.get("/me", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password");
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    res.json({ success: true, data: buildUserPayload(user) });
+  } catch (err) {
+    console.error("❌  Error fetching profile:", err.message);
+    res.status(500).json({ success: false, message: "Failed to fetch profile" });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════
+//  PATCH /api/auth/profile
+//  Updates the authenticated user's mutable profile fields:
+//  name, mobile, department, year.
+// ════════════════════════════════════════════════════════════════════
+router.patch("/profile", verifyToken, async (req, res) => {
+  try {
+    const { name, mobile, department, year } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Only update fields that are present in the request
+    if (name !== undefined) user.name = name;
+    if (mobile !== undefined) user.mobile = mobile;
+    if (department !== undefined) user.department = department;
+    if (year !== undefined) user.year = year;
+
+    await user.save();
+
+    res.json({ success: true, data: buildUserPayload(user) });
+  } catch (err) {
+    console.error("❌  Error updating profile:", err.message);
+    res.status(500).json({ success: false, message: "Failed to update profile" });
   }
 });
 

@@ -186,7 +186,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
           translateY(${isCenter ? -65 : position % 2 ? 15 : -15}px)
           rotate(${isCenter ? 0 : position % 2 ? 2.5 : -2.5}deg)
         `,
-        boxShadow: isCenter ? "0px 8px 0px 4px var(--color-cf-black)" : "0px 0px 0px 0px transparent"
+        boxShadow: isCenter ? "0px 8px 0px 4px #000000" : "0px 0px 0px 0px transparent"
       }}
     >
       <span
@@ -209,7 +209,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
           isCenter ? "bg-cf-black" : "bg-cf-white/10"
         )}
         style={{
-          boxShadow: "3px 3px 0px var(--color-cf-white)"
+          boxShadow: "3px 3px 0px #ffffff"
         }}
       />
       <h3 className={cn(

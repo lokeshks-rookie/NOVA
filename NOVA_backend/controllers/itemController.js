@@ -196,3 +196,40 @@ export const getItemStats = async (_req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Delete an item (owner or admin only)
+// @route   DELETE /api/items/:id
+export const deleteItem = async (req, res, next) => {
+  try {
+    const item = await Item.findById(req.params.id);
+
+    if (!item) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Item not found" });
+    }
+
+    // Only the reporter or an admin can delete
+    const isOwner = item.reportedBy.toString() === req.user._id.toString();
+    const isAdmin = ["admin", "staff"].includes(req.user.role);
+    if (!isOwner && !isAdmin) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorised to delete this item" });
+    }
+
+    await Item.findByIdAndDelete(req.params.id);
+
+    await AuditLog.create({
+      action: "item_deleted",
+      actor: req.user._id,
+      target: item._id,
+      targetModel: "Item",
+      metadata: { title: item.title, category: item.category },
+    });
+
+    res.json({ success: true, message: "Item deleted" });
+  } catch (error) {
+    next(error);
+  }
+};

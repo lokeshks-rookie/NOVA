@@ -14,10 +14,16 @@ export const createClaim = async (req, res, next) => {
   try {
     const { itemId, answers, proofImageUrl } = req.body;
 
-    // Check item exists and is claimable
     const item = await Item.findById(itemId);
     if (!item) {
       return res.status(404).json({ success: false, message: "Item not found" });
+    }
+
+    // Prevent claims on "lost" items (they should be reported as "found" instead)
+    if (item.type === "lost") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Cannot claim a lost item. Please report it as found instead." });
     }
     if (item.status === "claimed" || item.status === "closed") {
       return res

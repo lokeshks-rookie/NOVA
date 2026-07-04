@@ -26,7 +26,7 @@ import "@/components/landing/landing.css"
 
 export default function LandingPage() {
   return (
-    <div>
+    <div className="landing-root">
       <LandingNavbar />
       <main>
         <HomeFrame />

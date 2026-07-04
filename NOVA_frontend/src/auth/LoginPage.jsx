@@ -14,6 +14,8 @@
 
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useApp } from "@/context/AppContext";
+import api from "@/lib/api";
 import "./auth.css";
 
 // ─── Google SVG Icon (no external dependency) ────────────────────
@@ -50,6 +52,7 @@ const GoogleIcon = () => (
 // ════════════════════════════════════════════════════════════════════
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useApp();
 
   // ─── Form state ───────────────────────────────────────────────
   const [searchParams] = useSearchParams();
@@ -84,49 +87,30 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // MOCK LOGIN FOR DEVELOPMENT - SKIP VALIDATION
-    /*
     const validationError = validate();
     if (validationError) {
       setError(validationError);
       return;
     }
-    */
 
     setLoading(true);
     setError("");
 
     try {
-      // ── API: POST /api/auth/login
-      // Request  body : { email, password }
-      // Response body : { token: string, user: { _id, name, email, role, ... } }
+      const data = await api.post("/auth/login", { email: form.email, password: form.password });
       
-      // MOCK LOGIN FOR DEVELOPMENT
-      /*
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, password: form.password }),
-      });
+      // Set the token first so that api.js has it immediately
+      if (data.token) {
+        localStorage.setItem("cf_token", data.token);
+      }
 
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || "Login failed. Check your credentials.");
-      */
-      
-      const data = {
-        token: "mock-jwt-token-for-development",
-        user: { _id: "mock-user-1", name: "Test User", email: form.email || "test@example.com", role: "student" }
-      };
-
-      // Persist auth state
-      localStorage.setItem("cf_token", data.token);
-      localStorage.setItem("cf_user", JSON.stringify(data.user));
+      // Persist auth state using Context
+      login(data.user);
 
       // NAVIGATION → /dashboard (on successful login)
       navigate("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed.");
+      setError(err.message || "Login failed.");
     } finally {
       setLoading(false);
     }

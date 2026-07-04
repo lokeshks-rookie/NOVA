@@ -17,6 +17,8 @@
 
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useApp } from "@/context/AppContext";
+import api from "@/lib/api";
 import "./auth.css";
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -83,6 +85,7 @@ const GoogleIcon = () => (
 // ════════════════════════════════════════════════════════════════════
 export default function SignupPage() {
   const navigate = useNavigate();
+  const { login } = useApp();
 
   const [searchParams] = useSearchParams();
 
@@ -164,14 +167,11 @@ export default function SignupPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // MOCK SIGNUP FOR DEVELOPMENT - SKIP VALIDATION
-    /*
     const validationError = validate();
     if (validationError) {
       setError(validationError);
       return;
     }
-    */
 
     setLoading(true);
     setError("");
@@ -190,41 +190,19 @@ export default function SignupPage() {
     };
 
     try {
-      // ── API: POST /api/auth/signup
-      // Request  body : payload (see above)
-      // Response body : { token: string, user: { _id, name, email, role, ... } }
+      const data = await api.post("/auth/signup", payload);
       
-      // MOCK SIGNUP FOR DEVELOPMENT
-      /*
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      if (data.token) {
+        localStorage.setItem("cf_token", data.token);
+      }
 
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || "Signup failed. Please try again.");
-      */
-      
-      const data = {
-        token: "mock-jwt-token-for-development",
-        user: { 
-          _id: "mock-user-1", 
-          name: payload.fullName || "Test User", 
-          email: payload.email || "test@example.com", 
-          role: payload.role || "student" 
-        }
-      };
-
-      // Persist auth state immediately — no login step required after signup
-      localStorage.setItem("cf_token", data.token);
-      localStorage.setItem("cf_user", JSON.stringify(data.user));
+      // Persist auth state immediately using Context
+      login(data.user);
 
       // NAVIGATION → /dashboard (first-time user — never goes to /login)
       navigate("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed.");
+      setError(err.message || "Signup failed.");
     } finally {
       setLoading(false);
     }

@@ -40,7 +40,7 @@ export function HomeFrame() {
               fontWeight: 900,
               lineHeight: 0.95,
               letterSpacing: "-0.04em",
-              color: "var(--color-cf-white)",
+              color: "#ffffff",
             }}
           >
             NOVA

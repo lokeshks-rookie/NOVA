@@ -20,11 +20,13 @@ export const getMyAlerts = async (req, res, next) => {
 // @route   POST /api/search-alerts
 export const createAlert = async (req, res, next) => {
   try {
-    const { queryText, category, contactMethod } = req.body;
+    const { queryText, query, category, contactMethod } = req.body;
+    // Accept both field names for frontend compatibility
+    const searchText = queryText || query;
 
     const alert = await SearchAlert.create({
       user: req.user._id,
-      queryText,
+      queryText: searchText,
       category: category || null,
       contactMethod: contactMethod || "email",
     });
@@ -34,7 +36,7 @@ export const createAlert = async (req, res, next) => {
       actor: req.user._id,
       target: alert._id,
       targetModel: "SearchAlert",
-      metadata: { queryText, category },
+      metadata: { queryText: searchText, category },
     });
 
     res.status(201).json({ success: true, data: alert });

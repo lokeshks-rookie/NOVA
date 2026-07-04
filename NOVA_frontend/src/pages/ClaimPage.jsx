@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
 import { ArrowLeft, Upload, Check, X } from "lucide-react"
 import { Logo } from "@/components/Logo"
@@ -7,7 +7,7 @@ import { StepIndicator } from "@/components/StepIndicator"
 import { Button } from "@/components/ui/Button"
 import { Input, Label, Textarea } from "@/components/ui/Field"
 import { useApp } from "@/context/AppContext"
-import { mockItems } from "@/data/mock"
+import api from "@/lib/api"
 
 const STEPS = ["Verify your identity", "Prove ownership", "Claim submitted"]
 
@@ -18,9 +18,36 @@ export default function ClaimPage() {
   const [step, setStep] = useState(0)
   const [answer, setAnswer] = useState("")
   const [proofPhoto, setProofPhoto] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  const item = mockItems.find((i) => i.id === itemId)
+  // Fetch item from API
+  const [item, setItem] = useState(null)
+  const [loading, setLoading] = useState(true)
+
   const refNum = `CL-${Date.now().toString(36).toUpperCase().slice(-6)}`
+
+  useEffect(() => {
+    api.get(`/items/${itemId}`)
+      .then((res) => {
+        const d = res?.data
+        setItem({
+          id: d._id || d.id,
+          title: d.title,
+          challengeQuestion: d.challengeQuestions?.[0] || null,
+          imageUrl: d.imageUrls?.[0] || null,
+        })
+      })
+      .catch(() => setItem(null))
+      .finally(() => setLoading(false))
+  }, [itemId])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-cf-muted">Loading item...</p>
+      </div>
+    )
+  }
 
   if (!item) {
     return (
@@ -37,9 +64,22 @@ export default function ClaimPage() {
     if (file) setProofPhoto({ name: file.name, url: URL.createObjectURL(file) })
   }
 
-  const handleSubmitClaim = () => {
-    setStep(2)
-    addToast({ variant: "success", title: "Claim submitted", message: `Reference: ${refNum}` })
+  const handleSubmitClaim = async () => {
+    setSubmitting(true)
+    try {
+      await api.post("/claims", {
+        itemId: item.id,
+        answers: item.challengeQuestion
+          ? [{ question: item.challengeQuestion, answer: answer }]
+          : [],
+      })
+      setStep(2)
+      addToast({ variant: "success", title: "Claim submitted", message: `Reference: ${refNum}` })
+    } catch (err) {
+      addToast({ variant: "error", title: "Claim failed", message: err.message || "Please try again." })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -138,8 +178,8 @@ export default function ClaimPage() {
                 <Button variant="secondary" onClick={() => setStep(0)} className="flex-1">
                   Back
                 </Button>
-                <Button onClick={handleSubmitClaim} disabled={!answer.trim()} className="flex-1" badge>
-                  Submit claim
+                <Button onClick={handleSubmitClaim} disabled={!answer.trim() || submitting} className="flex-1" badge>
+                  {submitting ? "Submitting..." : "Submit claim"}
                 </Button>
               </div>
             </div>

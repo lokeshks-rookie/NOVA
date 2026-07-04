@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 /*
   CampusFind design tokens — sourced exclusively from campus_brand_guidelines.md
   Core palette (§2): black, accent-yellow, cream, white, text-muted
@@ -41,6 +43,11 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
+  }
+  /* Fix native select options invisible text in dark mode */
+  option {
+    background-color: var(--color-cf-white);
+    color: var(--color-cf-black);
   }
   /* Visible keyboard focus states for all interactive elements */
   :focus-visible {
@@ -97,6 +104,35 @@ html.dark .border-black\/5 { border-color: rgba(255,255,255,0.05) !important; }
 html.dark .text-black\/50 { color: rgba(255,255,255,0.5) !important; }
 html.dark .text-black\/60 { color: rgba(255,255,255,0.6) !important; }
 html.dark .text-black\/40 { color: rgba(255,255,255,0.4) !important; }
+
+/* ── Landing page isolation ──────────────────────────────────────────── */
+/* The landing page has a fixed dark visual design (black backgrounds,    */
+/* white text, yellow accents). It must NEVER be affected by the app's    */
+/* light/dark theme toggle. We restore all tokens to their defaults and   */
+/* neutralize the raw-Tailwind dark-mode overrides inside .landing-root.  */
+html.dark .landing-root {
+  --color-cf-black: #000000;
+  --color-cf-white: #ffffff;
+  --color-cf-cream: #f0efed;
+  --color-cf-muted: #75797b;
+  --color-cf-line: #e4e3e0;
+  --color-cf-yellow: #efd556;
+  --color-cf-success: #2e7d46;
+  --color-cf-danger: #c0392b;
+  --color-cf-info: #3b5ba5;
+  color-scheme: light;
+}
+
+/* Undo the aggressive raw-Tailwind class overrides for landing page */
+html.dark .landing-root .bg-white { background-color: #ffffff !important; }
+html.dark .landing-root .bg-black { background-color: #000000 !important; }
+html.dark .landing-root .text-black { color: #000000 !important; }
+html.dark .landing-root .text-white { color: #ffffff !important; }
+html.dark .landing-root .border-black\/10 { border-color: rgba(0,0,0,0.1) !important; }
+html.dark .landing-root .border-black\/5 { border-color: rgba(0,0,0,0.05) !important; }
+html.dark .landing-root .text-black\/50 { color: rgba(0,0,0,0.5) !important; }
+html.dark .landing-root .text-black\/60 { color: rgba(0,0,0,0.6) !important; }
+html.dark .landing-root .text-black\/40 { color: rgba(0,0,0,0.4) !important; }
 
 /* Auth pages — keep them on light bg regardless of theme since they         */
 /* have a fixed visual design with left panel.                               */

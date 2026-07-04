@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Check, X, Eye, Clock, Package, Users, BarChart3 } from "lucide-react"
 import { Eyebrow } from "@/components/Eyebrow"
 import { StatusBadge } from "@/components/StatusBadge"
@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/Button"
 import { Label, Select, Textarea } from "@/components/ui/Field"
 import { Modal } from "@/components/ui/Modal"
 import { useApp } from "@/context/AppContext"
-import { mockClaims, mockItems } from "@/data/mock"
 import { cn, timeAgo } from "@/lib/utils"
+import api from "@/lib/api"
 
 const TABS = [
   { key: "pending", label: "Pending Claims" },
@@ -28,7 +28,12 @@ const REJECT_REASONS = [
 export default function AdminPage() {
   const { addToast } = useApp()
   const [activeTab, setActiveTab] = useState("pending")
-  const [claims, setClaims] = useState(mockClaims)
+  
+  // Data state
+  const [claims, setClaims] = useState([])
+  const [items, setItems] = useState([])
+  const [dashboardStats, setDashboardStats] = useState({ total: 0, open: 0, pending: 0, thisWeek: 0 })
+  const [loading, setLoading] = useState(true)
 
   // Modal state
   const [rejectModal, setRejectModal] = useState(null) // claim object
@@ -36,41 +41,94 @@ export default function AdminPage() {
   const [rejectReason, setRejectReason] = useState("")
   const [rejectNote, setRejectNote] = useState("")
 
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+
+    Promise.all([
+      api.get("/claims").catch(() => ({ data: [] })),
+      api.get("/items?limit=100").catch(() => ({ data: [] })),
+      api.get("/items/stats").catch(() => ({ data: { total: 0, open: 0, pending: 0, thisWeek: 0 } })),
+    ]).then(([claimsRes, itemsRes, statsRes]) => {
+      if (cancelled) return
+
+      setClaims(
+        (claimsRes?.data || []).map((c) => ({
+          id: c._id || c.id,
+          itemId: c.item?._id || c.item?.id || c.itemId,
+          itemTitle: c.item?.title || "Unknown item",
+          itemImage: c.item?.imageUrls?.[0] || "/placeholder.svg",
+          claimantName: c.claimant?.name || "Unknown user",
+          claimDate: c.createdAt || c.claimDate,
+          status: c.status,
+          challengeAnswer: c.answers?.[0]?.answer || c.challengeAnswer,
+          adminNote: c.adminNote || null,
+          pickupInfo: c.pickupInfo || null,
+        }))
+      )
+
+      setItems(
+        (itemsRes?.data || []).map((item) => ({
+          id: item._id || item.id,
+          title: item.title,
+          type: item.type,
+          location: item.location,
+          date: item.date || item.createdAt,
+          status: item.status,
+          imageUrl: item.imageUrls?.[0] || "/placeholder.svg",
+        }))
+      )
+
+      if (statsRes?.data) {
+        setDashboardStats(statsRes.data)
+      }
+    }).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => { cancelled = true }
+  }, [])
+
   const pendingClaims = claims.filter((c) => c.status === "pending")
   const resolvedClaims = claims.filter((c) => c.status === "approved" || c.status === "rejected")
 
   const stats = [
-    { label: "Total items", value: mockItems.length, icon: Package },
-    { label: "Open claims", value: pendingClaims.length, icon: Clock },
-    { label: "Items this week", value: mockItems.filter((i) => new Date(i.date) > Date.now() - 7 * 86400000).length, icon: BarChart3 },
-    { label: "Avg resolution", value: "18h", icon: Users },
+    { label: "Total items", value: dashboardStats.total, icon: Package },
+    { label: "Open claims", value: dashboardStats.pending, icon: Clock },
+    { label: "Items this week", value: dashboardStats.thisWeek, icon: BarChart3 },
+    { label: "Avg resolution", value: "24h", icon: Users },
   ]
 
-  const handleApprove = (claim) => {
-    const pin = Math.floor(1000 + Math.random() * 9000)
-    setClaims((prev) =>
-      prev.map((c) =>
-        c.id === claim.id
-          ? { ...c, status: "approved", pickupInfo: `Collect from Lost & Found desk, Main Block. PIN: ${pin}` }
-          : c,
-      ),
-    )
-    setApproveModal(null)
-    addToast({ variant: "success", title: "Claim approved", message: `Pickup PIN: ${pin}` })
+  const handleApprove = async (claim) => {
+    try {
+      const res = await api.patch(`/claims/${claim.id}/approve`)
+      if (res?.data) {
+        setClaims((prev) =>
+          prev.map((c) => (c.id === claim.id ? { ...c, status: "approved", pickupInfo: res.data.pickupInfo } : c))
+        )
+      }
+      setApproveModal(null)
+      addToast({ variant: "success", title: "Claim approved", message: "User notified." })
+    } catch (err) {
+      addToast({ variant: "error", title: "Action failed", message: err.message || "Failed to approve claim." })
+    }
   }
 
-  const handleReject = (claim) => {
-    setClaims((prev) =>
-      prev.map((c) =>
-        c.id === claim.id
-          ? { ...c, status: "rejected", adminNote: `${rejectReason}${rejectNote ? ". " + rejectNote : ""}` }
-          : c,
-      ),
-    )
-    setRejectModal(null)
-    setRejectReason("")
-    setRejectNote("")
-    addToast({ variant: "info", title: "Claim rejected", message: `Claim for ${claim.itemTitle} has been rejected.` })
+  const handleReject = async (claim) => {
+    try {
+      const res = await api.patch(`/claims/${claim.id}/reject`, { rejectReason, adminNote: rejectNote })
+      if (res?.data) {
+        setClaims((prev) =>
+          prev.map((c) => (c.id === claim.id ? { ...c, status: "rejected", adminNote: res.data.adminNote } : c))
+        )
+      }
+      setRejectModal(null)
+      setRejectReason("")
+      setRejectNote("")
+      addToast({ variant: "info", title: "Claim rejected", message: `Claim for ${claim.itemTitle} has been rejected.` })
+    } catch (err) {
+      addToast({ variant: "error", title: "Action failed", message: err.message || "Failed to reject claim." })
+    }
   }
 
   return (
@@ -190,7 +248,7 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-cf-line">
-              {mockItems.map((item) => (
+              {items.map((item) => (
                 <tr key={item.id} className="hover:bg-cf-cream/50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">

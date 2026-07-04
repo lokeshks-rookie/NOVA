@@ -4,6 +4,7 @@
   "description": "NOVA database connection and models",
   "type": "module",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "mongoose": "^8.4.0"
   }
 }

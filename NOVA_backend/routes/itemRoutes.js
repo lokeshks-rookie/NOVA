@@ -6,6 +6,7 @@ import {
   getItemById,
   updateItem,
   getItemStats,
+  deleteItem,
 } from "../controllers/itemController.js";
 
 const router = Router();
@@ -25,4 +26,8 @@ router.get("/:id", getItemById);
 // PATCH /api/items/:id    → update item (owner or admin)
 router.patch("/:id", verifyToken, updateItem);
 
+// DELETE /api/items/:id   → delete item (owner or admin)
+router.delete("/:id", verifyToken, deleteItem);
+
 export default router;
+

@@ -42,9 +42,14 @@ export default function ProfilePage() {
     .join("")
     .toUpperCase()
 
-  const handleSavePersonal = () => {
-    updateUser({ name, mobile: `+91 ${mobile}`, department, year: year || null })
-    addToast({ variant: "success", title: "Profile updated", message: "Your personal information has been saved." })
+  const handleSavePersonal = async () => {
+    try {
+      const res = await api.patch("/auth/profile", { name, mobile: `+91 ${mobile}`, department, year: year || null })
+      if (res?.data) updateUser(res.data)
+      addToast({ variant: "success", title: "Profile updated", message: "Your personal information has been saved." })
+    } catch (err) {
+      addToast({ variant: "error", title: "Update failed", message: err.message || "Please try again." })
+    }
   }
 
   const handleChangePw = () => {

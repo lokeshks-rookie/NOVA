@@ -1,11 +1,13 @@
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { PlusCircle, PackageSearch, Search, FileCheck, ArrowRight, Bell } from "lucide-react"
 import { useApp } from "@/context/AppContext"
-import { mockItems, mockClaims } from "@/data/mock"
 import { ItemCard } from "@/components/ItemCard"
+import { ItemCardSkeleton } from "@/components/ui/Skeleton"
 import { StatusBadge } from "@/components/StatusBadge"
 import { Eyebrow } from "@/components/Eyebrow"
 import { formatDate, timeAgo } from "@/lib/utils"
+import api from "@/lib/api"
 
 function greeting() {
   const h = new Date().getHours()
@@ -24,11 +26,58 @@ const quickActions = [
 export default function DashboardPage() {
   const { user, savedSearches, toggleSavedSearch } = useApp()
 
-  // The current user's own reports + claims for the activity list
-  const myActivity = mockClaims
-    .filter((c) => c.claimantName === user.name)
-    .map((c) => ({ id: c.id, title: c.itemTitle, kind: "Claim", status: c.status, date: c.claimDate }))
-  const feed = mockItems.slice(0, 6)
+  const [feed, setFeed] = useState([])
+  const [myActivity, setMyActivity] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchData() {
+      setLoading(true)
+      try {
+        const [itemsRes, claimsRes] = await Promise.all([
+          api.get("/items?limit=6"),
+          api.get("/claims/mine").catch(() => ({ data: [] })),
+        ])
+
+        if (cancelled) return
+
+        setFeed(
+          (itemsRes?.data || []).map((item) => ({
+            id: item._id || item.id,
+            type: item.type,
+            category: item.category,
+            title: item.title,
+            description: item.description,
+            location: item.location,
+            date: item.date || item.createdAt,
+            status: item.status,
+            imageUrl: item.imageUrls?.[0] || null,
+            reportedBy: item.reportedBy,
+          }))
+        )
+
+        setMyActivity(
+          (claimsRes?.data || []).map((c) => ({
+            id: c._id || c.id,
+            title: c.item?.title || c.itemTitle || "Unknown item",
+            kind: "Claim",
+            status: c.status,
+            date: c.createdAt || c.claimDate,
+          }))
+        )
+      } catch (err) {
+        console.error("Dashboard fetch error:", err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetchData()
+    return () => { cancelled = true }
+  }, [])
+
   const alertSearch = savedSearches.find((s) => s.enabled && s.newMatches > 0)
 
   return (
@@ -71,7 +120,6 @@ export default function DashboardPage() {
       <section>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {quickActions.map((a) => (
-            // NAV → a.to — quick action shortcut
             <Link
               key={a.label}
               to={a.to}
@@ -93,7 +141,9 @@ export default function DashboardPage() {
       <section>
         <Eyebrow>My recent activity</Eyebrow>
         <div className="mt-4 overflow-hidden border border-black/10 bg-white">
-          {myActivity.length === 0 ? (
+          {loading ? (
+            <p className="p-5 text-sm text-black/50">Loading...</p>
+          ) : myActivity.length === 0 ? (
             <p className="p-5 text-sm text-black/50">No activity yet.</p>
           ) : (
             <table className="w-full text-left text-sm">
@@ -126,15 +176,20 @@ export default function DashboardPage() {
       <section>
         <div className="flex items-center justify-between">
           <Eyebrow>Campus feed</Eyebrow>
-          {/* NAV → /search — see all campus items */}
           <Link to="/search" className="text-sm font-semibold underline underline-offset-4">
             View all
           </Link>
         </div>
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {feed.map((item) => (
-            <ItemCard key={item.id} item={item} />
-          ))}
+          {loading ? (
+            Array.from({ length: 6 }).map((_, i) => <ItemCardSkeleton key={i} />)
+          ) : feed.length > 0 ? (
+            feed.map((item) => <ItemCard key={item.id} item={item} />)
+          ) : (
+            <p className="col-span-full text-center text-sm text-black/50 py-8">
+              No items reported yet. Be the first to report a lost or found item!
+            </p>
+          )}
         </div>
       </section>
 
@@ -142,35 +197,39 @@ export default function DashboardPage() {
       <section>
         <Eyebrow>Saved search alerts</Eyebrow>
         <div className="mt-4 flex flex-col gap-3">
-          {savedSearches.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center justify-between border border-black/10 bg-white px-5 py-4"
-            >
-              <div>
-                <p className="font-medium">&ldquo;{s.query}&rdquo;</p>
-                <p className="text-sm text-black/50">
-                  {s.newMatches > 0 ? `${s.newMatches} new matches` : "No new matches"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => toggleSavedSearch(s.id)}
-                role="switch"
-                aria-checked={s.enabled}
-                aria-label={`Notifications for ${s.query}`}
-                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EFD556] focus-visible:ring-offset-2 ${
-                  s.enabled ? "bg-[#22c55e]" : "bg-[#d1d5db]"
-                }`}
+          {savedSearches.length === 0 ? (
+            <p className="text-sm text-black/50">No saved searches yet. Search for an item and save it to get alerts.</p>
+          ) : (
+            savedSearches.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between border border-black/10 bg-white px-5 py-4"
               >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-in-out ${
-                    s.enabled ? "translate-x-5" : "translate-x-0.5"
+                <div>
+                  <p className="font-medium">&ldquo;{s.query}&rdquo;</p>
+                  <p className="text-sm text-black/50">
+                    {s.newMatches > 0 ? `${s.newMatches} new matches` : "No new matches"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleSavedSearch(s.id)}
+                  role="switch"
+                  aria-checked={s.enabled}
+                  aria-label={`Notifications for ${s.query}`}
+                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EFD556] focus-visible:ring-offset-2 ${
+                    s.enabled ? "bg-[#22c55e]" : "bg-[#d1d5db]"
                   }`}
-                />
-              </button>
-            </div>
-          ))}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-in-out ${
+                      s.enabled ? "translate-x-5" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </section>
     </div>

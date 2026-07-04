@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import { MapPin, Clock, Share2, Flag, ChevronRight, ArrowLeft } from "lucide-react"
 import { StatusBadge } from "@/components/StatusBadge"
@@ -5,16 +6,60 @@ import { CategoryBadge } from "@/components/CategoryBadge"
 import { Eyebrow } from "@/components/Eyebrow"
 import { Button } from "@/components/ui/Button"
 import { useApp } from "@/context/AppContext"
-import { mockItems } from "@/data/mock"
 import { timeAgo, formatDate } from "@/lib/utils"
+import api from "@/lib/api"
 
 export default function ItemDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { addToast } = useApp()
-  const item = mockItems.find((i) => i.id === id)
 
-  if (!item) {
+  const [item, setItem] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(false)
+
+    api.get(`/items/${id}`)
+      .then((res) => {
+        if (cancelled) return
+        const d = res?.data
+        setItem({
+          id: d._id || d.id,
+          type: d.type,
+          category: d.category,
+          title: d.title,
+          description: d.description,
+          location: d.location,
+          date: d.date || d.createdAt,
+          status: d.status,
+          imageUrl: d.imageUrls?.[0] || null,
+          reportedBy: d.reportedBy?.name || "a campus member",
+          challengeQuestion: d.challengeQuestions?.[0] || null,
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setError(true)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-cf-muted">Loading item...</p>
+      </div>
+    )
+  }
+
+  if (error || !item) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
         <h1 className="cf-h1">Item not found</h1>
@@ -34,6 +79,21 @@ export default function ItemDetailPage() {
 
   const actionCard = () => {
     if (item.status === "open") {
+      if (item.type === "lost") {
+        return (
+          <div className="space-y-4 rounded-2xl border border-cf-line bg-cf-white p-6">
+            <h3 className="text-lg font-semibold">Did you find this item?</h3>
+            <p className="text-sm leading-relaxed text-cf-muted">
+              If you ever find this lost item, report the item here so that it could reach the owner.
+            </p>
+            {/* NAV → /report — begin report flow */}
+            <Button as={Link} to="/report" className="w-full" badge>
+              Report found item
+            </Button>
+          </div>
+        )
+      }
+
       return (
         <div className="space-y-4 rounded-2xl border border-cf-line bg-cf-white p-6">
           <h3 className="text-lg font-semibold">Claim this item</h3>

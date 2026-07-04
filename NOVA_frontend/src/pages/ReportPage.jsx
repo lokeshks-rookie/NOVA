@@ -9,6 +9,7 @@ import { Input, Textarea, Label, Select } from "@/components/ui/Field"
 import { useApp } from "@/context/AppContext"
 import { CATEGORIES, LOCATIONS } from "@/data/mock"
 import { cn } from "@/lib/utils"
+import api from "@/lib/api"
 
 const STEPS = ["Type & Category", "Details & Photos", "Location", "Review & Submit"]
 
@@ -17,6 +18,7 @@ export default function ReportPage() {
   const { addToast } = useApp()
   const [step, setStep] = useState(0)
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   // Form state
   const [type, setType] = useState(null) // "lost" | "found"
@@ -49,9 +51,30 @@ export default function ReportPage() {
 
   const removePhoto = (idx) => setPhotos((prev) => prev.filter((_, i) => i !== idx))
 
-  const handleSubmit = () => {
-    setSubmitted(true)
-    addToast({ variant: "success", title: "Report submitted", message: `Reference: ${refNum}` })
+  const handleSubmit = async () => {
+    setSubmitting(true)
+    try {
+      const dateTime = date && time ? `${date}T${time}:00` : date ? `${date}T00:00:00` : new Date().toISOString()
+      await api.post("/items", {
+        type,
+        category,
+        title,
+        description,
+        location,
+        landmark: landmark || undefined,
+        date: dateTime,
+        imageUrls: photos.map((p) => p.url),
+        challengeQuestions: challengeQ && challengeA
+          ? [{ question: challengeQ, answer: challengeA }]
+          : [],
+      })
+      setSubmitted(true)
+      addToast({ variant: "success", title: "Report submitted", message: `Reference: ${refNum}` })
+    } catch (err) {
+      addToast({ variant: "error", title: "Submission failed", message: err.message || "Please try again." })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (submitted) {

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { Eyebrow } from "@/components/Eyebrow"
@@ -6,8 +6,8 @@ import { StatusBadge } from "@/components/StatusBadge"
 import { EmptyState } from "@/components/EmptyState"
 import { Button } from "@/components/ui/Button"
 import { useApp } from "@/context/AppContext"
-import { mockClaims, mockItems } from "@/data/mock"
 import { cn, timeAgo } from "@/lib/utils"
+import api from "@/lib/api"
 
 const TABS = ["My Claims", "My Reports"]
 
@@ -16,14 +16,64 @@ export default function MyClaimsPage() {
   const [activeTab, setActiveTab] = useState(0)
   const [expandedId, setExpandedId] = useState(null)
 
-  const myClaims = mockClaims.filter((c) => c.claimantName === user?.name)
-  const myReports = mockItems.filter(
-    (item) => item.reportedBy === "a student" && user?.role === "student",
-  )
+  const [myClaims, setMyClaims] = useState([])
+  const [myReports, setMyReports] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+
+    Promise.all([
+      api.get("/claims/mine").catch(() => ({ data: [] })),
+      api.get("/items?reportedBy=me").catch(() => ({ data: [] })),
+    ]).then(([claimsRes, reportsRes]) => {
+      if (cancelled) return
+
+      setMyClaims(
+        (claimsRes?.data || []).map((c) => ({
+          id: c._id || c.id,
+          itemId: c.item?._id || c.item?.id || c.itemId,
+          itemTitle: c.item?.title || "Unknown item",
+          itemImage: c.item?.imageUrls?.[0] || "/placeholder.svg",
+          claimDate: c.createdAt || c.claimDate,
+          status: c.status,
+          challengeAnswer: c.challengeAnswer,
+          adminNote: c.adminNote || null,
+          pickupInfo: c.pickupInfo || null,
+        }))
+      )
+
+      setMyReports(
+        (reportsRes?.data || []).map((item) => ({
+          id: item._id || item.id,
+          title: item.title,
+          location: item.location,
+          date: item.date || item.createdAt,
+          status: item.status,
+          imageUrl: item.imageUrls?.[0] || "/placeholder.svg",
+        }))
+      )
+    }).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => { cancelled = true }
+  }, [])
 
   const claimStatus = (s) => {
     if (s === "pending") return "pending-review"
     return s
+  }
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <Eyebrow className="text-cf-muted">Your activity</Eyebrow>
+        <h1 className="cf-h1 mt-3 mb-8">Claims & Reports</h1>
+        <p className="text-sm text-cf-muted">Loading...</p>
+      </div>
+    )
   }
 
   return (
