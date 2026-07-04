@@ -1,9 +1,3 @@
-// ════════════════════════════════════════════════════════════════════
-//  User Model — NOVA
-//  Matches the frontend user shape from NOVA_frontend/src/data/mock.js
-//  Extended with Google OAuth fields (googleId, authProvider, avatarUrl)
-// ════════════════════════════════════════════════════════════════════
-
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
@@ -74,6 +68,14 @@ const userSchema = new mongoose.Schema(
     isVerified: {
       type: Boolean,
       default: false,
+    },
+
+    // ── Notification preferences (From core-backend) ──────────────
+    notificationPrefs: {
+      email: { type: Boolean, default: true },
+      sms: { type: Boolean, default: true },
+      whatsapp: { type: Boolean, default: true },
+      savedSearchAlerts: { type: Boolean, default: true },
     },
   },
   {

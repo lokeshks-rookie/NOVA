@@ -1,56 +1,57 @@
-// ════════════════════════════════════════════════════════════════════
-//  server.js — NOVA Backend Entry Point
-//  Tech stack : Node.js + Express + MongoDB (Mongoose)
-// ════════════════════════════════════════════════════════════════════
+// ─── NOVA Backend — server.js ──────────────────────────────────────────────
+// Entry point. Wires up Express, Mongoose, middleware, and all routes.
 
 import "dotenv/config";
 import express from "express";
-import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import connectDB from "../NOVA_database/connection.js";
+import errorHandler from "./middleware/errorHandler.js";
+
+// Route imports
 import authRoutes from "./routes/auth.js";
+import itemRoutes from "./routes/itemRoutes.js";
+import claimRoutes from "./routes/claimRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import searchAlertRoutes from "./routes/searchAlertRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ─── Middleware ──────────────────────────────────────────────────────
-app.use(express.json());
-app.use(cookieParser());
+// ─── Global Middleware ─────────────────────────────────────────────────────
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:3000",
-    credentials: true, // allow cookies to be sent cross-origin
+    credentials: true, // allow cookies to be sent cross-origin (required for auth)
   })
 );
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// ─── Routes ─────────────────────────────────────────────────────────
+// ─── API Routes ────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
+app.use("/api/items", itemRoutes);
+app.use("/api/claims", claimRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/search-alerts", searchAlertRoutes);
 
-// Health check
+// ─── Health Check ──────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+  res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
 });
 
-// ─── MongoDB connection (optional — server starts without it) ───────
-const MONGODB_URI = process.env.MONGODB_URI;
+// ─── Error Handler (must be last) ──────────────────────────────────────────
+app.use(errorHandler);
 
-async function startServer() {
-  if (MONGODB_URI) {
-    try {
-      await mongoose.connect(MONGODB_URI);
-      console.log("✅  Connected to MongoDB");
-    } catch (err) {
-      console.warn("⚠️  MongoDB connection failed:", err.message);
-      console.warn("   Server will start, but user creation/login won't work until MongoDB is connected.");
-    }
-  } else {
-    console.warn("⚠️  MONGODB_URI not set — running without database.");
-    console.warn("   Google OAuth redirect will work, but callback will fail until MongoDB is configured.");
-  }
-
+// ─── Start Server ──────────────────────────────────────────────────────────
+const start = async () => {
+  await connectDB();
   app.listen(PORT, () => {
-    console.log(`🚀  NOVA backend running on http://localhost:${PORT}`);
+    console.log(`\n🚀 NOVA Backend running on http://localhost:${PORT}`);
+    console.log(`📡 API base: http://localhost:${PORT}/api`);
+    console.log(`🩺 Health:   http://localhost:${PORT}/api/health\n`);
   });
-}
+};
 
-startServer();
+start();

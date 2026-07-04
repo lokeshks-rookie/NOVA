@@ -12,7 +12,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
-import User from "../models/User.js";
+import User from "../../NOVA_database/models/User.js";
 
 const router = Router();
 

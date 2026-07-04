@@ -36,8 +36,25 @@ export function verifyToken(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
+    // Map userId to _id to maintain compatibility with our controllers
+    if (req.user.userId && !req.user._id) {
+      req.user._id = req.user.userId;
+    }
     next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid or expired token." });
   }
+}
+
+/**
+ * Middleware: authorize
+ * Checks if req.user has one of the allowed roles.
+ */
+export function authorize(...allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: "Forbidden: insufficient permissions." });
+    }
+    next();
+  };
 }
