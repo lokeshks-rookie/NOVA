@@ -695,3 +695,32 @@
     padding: 28px 20px 40px;
   }
 }
+
+/* ─── Error banner ─── */
+.auth-error {
+  background: var(--auth-danger-bg);
+  border: 1px solid var(--auth-danger-border);
+  color: var(--auth-danger);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 12px 16px;
+  border-radius: var(--auth-r-input);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* ─── OAuth callback spinner ─── */
+.oauth-spinner {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  margin-top: 32px;
+  border: 3px solid var(--auth-border);
+  border-top-color: var(--auth-yellow);
+  border-radius: 50%;
+  animation: oauth-spin 0.7s linear infinite;
+}
+
+@keyframes oauth-spin {
+  to { transform: rotate(360deg); }
+}

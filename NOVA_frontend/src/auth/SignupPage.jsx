@@ -15,8 +15,8 @@
 //  [Privacy link]           → /privacy
 //  ─────────────────────────────────────────────────────────────────
 
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import "./auth.css";
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -84,7 +84,8 @@ const GoogleIcon = () => (
 export default function SignupPage() {
   const navigate = useNavigate();
 
-  // ─── Form state ───────────────────────────────────────────────
+  const [searchParams] = useSearchParams();
+
   const [role, setRole] = useState("student");
 
   const [form, setForm] = useState({
@@ -103,6 +104,14 @@ export default function SignupPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // ─── Show error from Google OAuth redirect ──────────────────
+  useEffect(() => {
+    const oauthError = searchParams.get("error");
+    if (oauthError === "google_auth_failed") {
+      setError("Google sign-in failed. Please try again.");
+    }
+  }, [searchParams]);
 
   // ─── Handlers ─────────────────────────────────────────────────
   const handleChange = (e) => {
@@ -306,12 +315,12 @@ export default function SignupPage() {
             <Link to="/login" className="auth-inline-link">Sign in</Link>
           </p>
 
-          {/* Error banner - Hiding for now as requested */}
-          {/* {error && (
+          {/* Error banner */}
+          {error && (
             <div className="auth-error" role="alert" aria-live="polite">
               {error}
             </div>
-          )} */}
+          )}
 
           {/* ─── Signup form ─── */}
           <form onSubmit={handleSubmit} noValidate className="auth-form">

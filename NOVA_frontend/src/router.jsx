@@ -6,6 +6,7 @@ import { RedirectIfAuthed } from "@/components/RedirectIfAuthed"
 import LandingPage from "@/pages/LandingPage"
 import LoginPage from "@/auth/LoginPage"
 import SignupPage from "@/auth/SignupPage"
+import OAuthCallbackPage from "@/auth/OAuthCallbackPage"
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage"
 import TermsPage from "@/pages/TermsPage"
 import PrivacyPage from "@/pages/PrivacyPage"
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
   { path: "/", element: <LandingPage /> },
   { path: "/login", element: <RedirectIfAuthed><LoginPage /></RedirectIfAuthed> },
   { path: "/signup", element: <RedirectIfAuthed><SignupPage /></RedirectIfAuthed> },
+  { path: "/auth/callback", element: <OAuthCallbackPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/terms", element: <TermsPage /> },
   { path: "/privacy", element: <PrivacyPage /> },
