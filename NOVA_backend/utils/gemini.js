@@ -3,7 +3,13 @@
 
 import { GoogleGenAI } from "@google/genai";
 import { Item } from "../../NOVA_database/models/index.js";
-import fetch from "node-fetch";
+
+// Common words to ignore during local keyword fallback matching
+const STOPWORDS = new Set([
+  "the", "and", "for", "with", "this", "that", "from", "have", "has", "had", 
+  "are", "was", "were", "you", "your", "lost", "found", "about", "some", 
+  "here", "there", "who", "what", "where", "when", "why", "how", "this", "that"
+]);
 
 // Initialize AI. GoogleGenAI automatically uses options or env variables.
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -145,7 +151,44 @@ export const chatAssistant = async (messagesHistory) => {
     return response.text;
   } catch (error) {
     console.error("❌ Gemini Chat Assistant failed:", error.message);
-    return "I'm having trouble connecting to my brain right now. Can you please try asking again in a moment?";
+    
+    // Fallback: Perform local search on the database items when Gemini is exhausted or offline
+    try {
+      const userMessage = messagesHistory[messagesHistory.length - 1]?.content?.toLowerCase() || "";
+      const dbItems = await Item.find({ status: "open" });
+      
+      const matches = dbItems.filter(item => {
+        const title = item.title.toLowerCase();
+        const desc = item.description.toLowerCase();
+        const location = item.location.toLowerCase();
+        const category = item.category.toLowerCase();
+        
+        // Split user input into words of at least 3 characters and filter out stopwords
+        const words = userMessage.split(/[\s,./?!;:]+/).filter(w => w.length >= 3 && !STOPWORDS.has(w));
+        
+        // Check if any word from the user's message matches item details
+        return words.some(word => 
+          title.includes(word) || 
+          desc.includes(word) || 
+          location.includes(word) || 
+          category.includes(word)
+        );
+      });
+      
+      if (matches.length > 0) {
+        let reply = `🤖 **Nova Assistant (Local Search Backup):**\n\nI checked the live database and found these active items matching your query:\n\n`;
+        matches.forEach(item => {
+          reply += `- **[${item.type.toUpperCase()}]** "${item.title}" in *${item.location}* (${item.category})\n  *Description:* ${item.description}\n`;
+        });
+        reply += `\nGo ahead and click **"Search Items"** in the sidebar to search for them and raise a claim!`;
+        return reply;
+      } else {
+        return `🤖 **Nova Assistant (Local Search Backup):**\n\nI checked the database but couldn't find any matching open reports for your query. I suggest clicking **"Report Item"** in the sidebar to register it!`;
+      }
+    } catch (fallbackError) {
+      console.error("❌ Fallback local search failed:", fallbackError.message);
+      return "I'm having trouble connecting to my brain right now. Can you please try asking again in a moment?";
+    }
   }
 };
 
@@ -198,6 +241,35 @@ export const filterSearchItems = async (query, dbItems) => {
     return parsedResults; // Array of { id, score }
   } catch (error) {
     console.error("❌ Gemini semantic search failed:", error.message);
-    return []; // Return empty on failure
+    
+    // Fallback: Perform local search on the database items when Gemini is exhausted or offline
+    try {
+      if (!query || !dbItems || dbItems.length === 0) {
+        return [];
+      }
+      const words = query.toLowerCase().split(/[\s,./?!;:]+/).filter(w => w.length >= 3 && !STOPWORDS.has(w));
+      return dbItems
+        .map(item => {
+          let score = 0;
+          const title = item.title.toLowerCase();
+          const desc = item.description.toLowerCase();
+          const location = item.location.toLowerCase();
+          const category = item.category.toLowerCase();
+          
+          words.forEach(word => {
+            if (title.includes(word)) score += 50;
+            else if (desc.includes(word)) score += 30;
+            else if (location.includes(word)) score += 20;
+            else if (category.includes(word)) score += 10;
+          });
+          
+          return { id: item._id.toString(), score: Math.min(score, 100) };
+        })
+        .filter(match => match.score >= 30)
+        .sort((a, b) => b.score - a.score);
+    } catch (fallbackError) {
+      console.error("❌ Fallback semantic search failed:", fallbackError.message);
+      return [];
+    }
   }
 };

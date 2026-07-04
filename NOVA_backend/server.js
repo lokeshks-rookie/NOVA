@@ -20,10 +20,13 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ─── Global Middleware ─────────────────────────────────────────────────────
+const origins = (process.env.CLIENT_URL || "http://localhost:3000")
+  .split(",")
+  .map((url) => url.trim());
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: origins,
     credentials: true, // allow cookies to be sent cross-origin (required for auth)
   })
 );
@@ -51,11 +54,26 @@ app.use(errorHandler);
 // ─── Start Server ──────────────────────────────────────────────────────────
 const start = async () => {
   await connectDB();
-  app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`\n🚀 NOVA Backend running on http://localhost:${PORT}`);
     console.log(`📡 API base: http://localhost:${PORT}/api`);
     console.log(`🩺 Health:   http://localhost:${PORT}/api/health\n`);
   });
+
+  // Handle unhandled promise rejections inside startup/server
+  process.on("unhandledRejection", (err) => {
+    console.error("❌ UNHANDLED REJECTION! Shutting down...");
+    console.error(err);
+    server.close(() => {
+      process.exit(1);
+    });
+  });
 };
+
+process.on("uncaughtException", (err) => {
+  console.error("❌ UNCAUGHT EXCEPTION! Shutting down...");
+  console.error(err.name, err.message, err.stack);
+  process.exit(1);
+});
 
 start();

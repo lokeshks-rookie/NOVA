@@ -12,8 +12,21 @@ import { Router } from "express";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
+import rateLimit from "express-rate-limit";
 import User from "../../NOVA_database/models/User.js";
 import { verifyToken } from "../middleware/auth.js";
+
+// Rate limiter for auth endpoints (max 15 attempts per 15 minutes per IP)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // Limit each IP to 15 requests per window
+  message: {
+    success: false,
+    message: "Too many authentication requests from this IP. Please try again after 15 minutes."
+  },
+  standardHeaders: true, // Return rate limit info in the RateLimit-* headers
+  legacyHeaders: false, // Disable the X-RateLimit-* headers
+});
 
 const router = Router();
 
@@ -60,6 +73,12 @@ function buildUserPayload(user) {
     idNumber: user.idNumber || null,
     memberSince: user.memberSince,
     avatar: user.avatarUrl || null,
+    notificationPrefs: user.notificationPrefs || {
+      email: true,
+      sms: true,
+      whatsapp: true,
+      savedSearchAlerts: true,
+    },
   };
 }
 
@@ -233,7 +252,7 @@ router.get("/google/callback", async (req, res) => {
 //  POST /api/auth/signup
 //  Registers a new user via local email/password.
 // ════════════════════════════════════════════════════════════════════
-router.post("/signup", async (req, res) => {
+router.post("/signup", authLimiter, async (req, res) => {
   try {
     const {
       role,
@@ -296,7 +315,7 @@ router.post("/signup", async (req, res) => {
 //  POST /api/auth/login
 //  Authenticates a user via local email/password.
 // ════════════════════════════════════════════════════════════════════
-router.post("/login", async (req, res) => {
+router.post("/login", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -311,10 +330,12 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ success: false, message: "Invalid credentials or user doesn't exist." });
     }
 
-    // If password doesn't exist (e.g. Google-only account), let them set it now
+    // If password doesn't exist (e.g. Google-only account), redirect to Google Auth
     if (!user.password) {
-      user.password = password;
-      await user.save();
+      return res.status(400).json({
+        success: false,
+        message: "This account was registered using Google. Please sign in with Google."
+      });
     }
 
     // Verify password

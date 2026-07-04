@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "NOVA database connection and models",
   "type": "module",
+  "main": "models/index.js",
   "dependencies": {
     "bcryptjs": "^3.0.3",
-    "mongoose": "^8.4.0"
+    "mongoose": "^9.7.3"
   }
 }

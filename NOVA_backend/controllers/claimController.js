@@ -45,9 +45,19 @@ export const createClaim = async (req, res, next) => {
 
     // Automatic verification based on the challenge answer
     if (item.challengeQuestions && item.challengeQuestions.length > 0) {
-      const expectedAnswer = item.challengeQuestions[0].answer.toLowerCase().trim();
+      const normalize = (str) => {
+        if (!str) return "";
+        return str
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .trim();
+      };
+
+      const expectedAnswer = normalize(item.challengeQuestions[0].answer);
       const providedAnswerObj = answers && answers.length > 0 ? answers[0] : null;
-      const providedAnswer = providedAnswerObj && providedAnswerObj.answer ? providedAnswerObj.answer.toLowerCase().trim() : "";
+      const providedAnswer = normalize(providedAnswerObj ? providedAnswerObj.answer : "");
 
       if (providedAnswer === expectedAnswer) {
         status = "approved";

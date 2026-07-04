@@ -51,7 +51,7 @@ export const createItem = async (req, res, next) => {
 
     // Audit log
     await AuditLog.create({
-      action: "item_reported",
+      action: "item_created",
       actor: req.user._id,
       target: item._id,
       targetModel: "Item",
@@ -108,14 +108,41 @@ export const getItems = async (req, res, next) => {
       ? { score: { $meta: "textScore" } }
       : {};
 
-    const [items, total] = await Promise.all([
-      Item.find(filter, selectOption)
-        .sort(sortOption)
-        .skip(skip)
-        .limit(parseInt(limit))
-        .populate("reportedBy", "name email role"),
-      Item.countDocuments(filter),
-    ]);
+    let items;
+    let total;
+
+    try {
+      [items, total] = await Promise.all([
+        Item.find(filter, selectOption)
+          .sort(sortOption)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .populate("reportedBy", "name email role"),
+        Item.countDocuments(filter),
+      ]);
+    } catch (err) {
+      // Fallback to regex query if MongoDB text index is not yet built/configured
+      if (q && (err.code === 27 || err.message.includes("text index") || err.message.includes("textIndex"))) {
+        console.warn("⚠️ Text index missing on 'Item' collection. Falling back to regex search.");
+        delete filter.$text;
+        filter.$or = [
+          { title: { $regex: q, $options: "i" } },
+          { description: { $regex: q, $options: "i" } },
+          { category: { $regex: q, $options: "i" } },
+        ];
+        
+        [items, total] = await Promise.all([
+          Item.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .populate("reportedBy", "name email role"),
+          Item.countDocuments(filter),
+        ]);
+      } else {
+        throw err;
+      }
+    }
 
     res.json({
       success: true,
@@ -174,7 +201,28 @@ export const updateItem = async (req, res, next) => {
         .json({ success: false, message: "Not authorised to update this item" });
     }
 
-    const updatedItem = await Item.findByIdAndUpdate(req.params.id, req.body, {
+    const allowedFields = [
+      "title",
+      "description",
+      "location",
+      "landmark",
+      "category",
+      "date",
+      "imageUrls",
+      "challengeQuestions",
+    ];
+    if (isAdmin) {
+      allowedFields.push("status");
+    }
+
+    const updates = {};
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) {
+        updates[key] = req.body[key];
+      }
+    }
+
+    const updatedItem = await Item.findByIdAndUpdate(req.params.id, updates, {
       new: true,
       runValidators: true,
     });
@@ -184,7 +232,7 @@ export const updateItem = async (req, res, next) => {
       actor: req.user._id,
       target: item._id,
       targetModel: "Item",
-      metadata: req.body,
+      metadata: updates,
     });
 
     res.json({ success: true, data: updatedItem });

@@ -126,10 +126,9 @@ itemSchema.index(
 // ── Generate reference number before save ──────────────────────────────────
 itemSchema.pre("save", function (next) {
   if (!this.referenceNumber) {
-    this.referenceNumber = `CF-${Date.now()
-      .toString(36)
-      .toUpperCase()
-      .slice(-6)}`;
+    const timestampPart = Date.now().toString(36).slice(-4).toUpperCase();
+    const randomPart = Math.random().toString(36).slice(2, 4).toUpperCase();
+    this.referenceNumber = `CF-${timestampPart}${randomPart}`;
   }
   next();
 });

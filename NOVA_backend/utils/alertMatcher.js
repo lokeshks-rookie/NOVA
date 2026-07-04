@@ -1,8 +1,10 @@
 // ─── Alert Matcher Utility ─────────────────────────────────────────────────
 // Runs when a new Item is created. Checks all active SearchAlerts and creates
 // Notifications for users whose saved search matches the new item.
+// Phase 2: Also sends Email / SMS based on user preferences & alert settings.
 
 import { SearchAlert, Notification } from "../../NOVA_database/models/index.js";
+import { sendMatchEmail } from "./emailService.js";
 
 /**
  * Check all active search alerts against a newly created item.
@@ -11,7 +13,11 @@ import { SearchAlert, Notification } from "../../NOVA_database/models/index.js";
  * @param {Object} newItem - The Mongoose item document just created.
  */
 export async function checkAlertsOnNewItem(newItem) {
-  const activeAlerts = await SearchAlert.find({ status: "active" });
+  // Populate user so we can access email, mobile, and notificationPrefs
+  const activeAlerts = await SearchAlert.find({ status: "active" }).populate(
+    "user",
+    "name email mobile notificationPrefs"
+  );
 
   if (!activeAlerts.length) return;
 
@@ -34,16 +40,46 @@ export async function checkAlertsOnNewItem(newItem) {
 
     // Create in-app notification
     await Notification.create({
-      user: alert.user,
+      user: alert.user._id,
       type: "match",
       title: "New match for your saved search",
       body: `A new item "${newItem.title}" matches your saved search for "${alert.queryText}".`,
       relatedItem: newItem._id,
     });
 
-    // TODO (Phase 2): Send email/SMS based on alert.contactMethod
-    // if (alert.contactMethod === "sms") { ... }
-    // if (alert.contactMethod === "email") { ... }
+    // ── Phase 2: External notifications ──────────────────────────────────
+    const prefs = alert.user.notificationPrefs || {};
+
+    // Guard: the user must have savedSearchAlerts enabled globally
+    if (!prefs.savedSearchAlerts) return;
+
+    // ── Email ────────────────────────────────────────────────────────────
+    if (alert.contactMethod === "email" && prefs.email && alert.user.email) {
+      try {
+        await sendMatchEmail({
+          to: alert.user.email,
+          userName: alert.user.name || "there",
+          itemTitle: newItem.title,
+          queryText: alert.queryText,
+          itemCategory: newItem.category,
+          itemUrl: `${process.env.CLIENT_URL || "http://localhost:3000"}/items/${newItem._id}`,
+        });
+      } catch (err) {
+        console.error(
+          `❌ Failed to send match email to ${alert.user.email}:`,
+          err.message
+        );
+      }
+    }
+
+    // ── SMS (Twilio placeholder) ─────────────────────────────────────────
+    if (alert.contactMethod === "sms" && prefs.sms && alert.user.mobile) {
+      // TODO: Replace with actual Twilio integration
+      console.log(
+        `📱 Mock sending SMS to ${alert.user.mobile}: ` +
+          `New match for "${alert.queryText}" — "${newItem.title}"`
+      );
+    }
   });
 
   await Promise.allSettled(ops);
@@ -51,3 +87,4 @@ export async function checkAlertsOnNewItem(newItem) {
     `🔔 Alert matcher: ${matchedAlerts.length}/${activeAlerts.length} alerts matched for item "${newItem.title}"`
   );
 }
+

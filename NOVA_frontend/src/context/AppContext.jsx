@@ -99,28 +99,42 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!state.user) return
 
-    api.get("/notifications").then((res) => {
-      const notifs = (res?.data || []).map((n) => ({
-        id: n._id || n.id,
-        type: n.type,
-        title: n.title,
-        body: n.body || n.message,
-        date: n.createdAt || n.date,
-        read: n.read,
-      }))
-      dispatch({ type: "SET_NOTIFICATIONS", payload: notifs })
-    }).catch(() => {})
+    const fetchNotifications = () => {
+      api.get("/notifications").then((res) => {
+        const notifs = (res?.data || []).map((n) => ({
+          id: n._id || n.id,
+          type: n.type,
+          title: n.title,
+          body: n.body || n.message,
+          date: n.createdAt || n.date,
+          read: n.read,
+        }))
+        dispatch({ type: "SET_NOTIFICATIONS", payload: notifs })
+      }).catch(() => {})
+    }
 
-    api.get("/search-alerts").then((res) => {
-      const alerts = (res?.data || []).map((a) => ({
-        id: a._id || a.id,
-        query: a.queryText || a.query,
-        category: a.category || "all",
-        enabled: a.status === "active",
-        newMatches: a.newMatches || 0,
-      }))
-      dispatch({ type: "SET_SAVED_SEARCHES", payload: alerts })
-    }).catch(() => {})
+    const fetchAlerts = () => {
+      api.get("/search-alerts").then((res) => {
+        const alerts = (res?.data || []).map((a) => ({
+          id: a._id || a.id,
+          query: a.queryText || a.query,
+          category: a.category || "all",
+          enabled: a.status === "active",
+          newMatches: a.newMatches || 0,
+        }))
+        dispatch({ type: "SET_SAVED_SEARCHES", payload: alerts })
+      }).catch(() => {})
+    }
+
+    fetchNotifications()
+    fetchAlerts()
+
+    // Poll notifications every 30 seconds
+    const pollInterval = setInterval(fetchNotifications, 30000)
+
+    return () => {
+      clearInterval(pollInterval)
+    }
   }, [state.user])
 
   const login = useCallback((user) => {

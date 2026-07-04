@@ -13,6 +13,7 @@ const auditLogSchema = new mongoose.Schema(
         "item_created",
         "item_updated",
         "item_closed",
+        "item_deleted",
         "claim_submitted",
         "claim_approved",
         "claim_rejected",
