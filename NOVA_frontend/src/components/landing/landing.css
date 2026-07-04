@@ -1,0 +1,329 @@
+/* ═══════════════════════════════════════════════════════════════════
+   landing.css — Scroll-driven animation styles for NOVA landing page
+   All colors/tokens from index.css (campus_brand_guidelines.md)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Global frame transition system ─── */
+.lnd-frame {
+  will-change: transform, opacity;
+  transition:
+    opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lnd-frame--hidden {
+  opacity: 0;
+  transform: translateY(40px);
+}
+
+.lnd-frame--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Hero entrance stagger ─── */
+@keyframes lnd-hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lnd-hero-wordmark {
+  animation: lnd-hero-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.lnd-hero-tagline {
+  animation: lnd-hero-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+}
+
+/* ─── Pinned section wrapper ─── */
+.lnd-pinned {
+  position: relative;
+}
+
+.lnd-pinned-inner {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ─── Process cards: fanned stack → row ─── */
+.lnd-card-stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.lnd-process-card {
+  position: absolute;
+  width: 340px;
+  max-width: 85vw;
+  background: var(--color-cf-white);
+  border-radius: 16px;
+  padding: 40px 32px;
+  transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+  border: 1.5px solid var(--color-cf-line);
+}
+
+/* Fanned starting positions */
+.lnd-process-card[data-index="0"] {
+  transform: rotate(-6deg) translateX(-20px) translateY(10px);
+  z-index: 3;
+}
+.lnd-process-card[data-index="1"] {
+  transform: rotate(0deg) translateX(0) translateY(-5px);
+  z-index: 2;
+}
+.lnd-process-card[data-index="2"] {
+  transform: rotate(6deg) translateX(20px) translateY(10px);
+  z-index: 1;
+}
+
+/* Revealed state — card pops into its row position */
+.lnd-process-card.lnd-card--revealed {
+  opacity: 1;
+  transform: rotate(0deg) translateX(0) translateY(0) scale(1);
+}
+
+/* Pop-in entrance */
+@keyframes lnd-card-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.lnd-card-pop {
+  animation: lnd-card-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Process card row layout (revealed state) */
+.lnd-cards-row {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  max-width: 1120px;
+  padding: 0 24px;
+}
+
+.lnd-cards-row .lnd-process-card {
+  position: relative;
+  width: 33.333%;
+  transform: none;
+}
+
+/* ─── Features frame ─── */
+.lnd-features-scene {
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lnd-features-scene--hidden {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.lnd-features-scene--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Features split columns */
+.lnd-feature-col {
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lnd-feature-col--hidden {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.lnd-feature-col--left.lnd-feature-col--hidden {
+  transform: translateX(-30px);
+}
+
+.lnd-feature-col--visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ─── Testimonials carousel ─── */
+.lnd-testimonials-track {
+  display: flex;
+  gap: 32px;
+  transition: transform 0.1s linear;
+  will-change: transform;
+}
+
+.lnd-testimonial-card {
+  flex-shrink: 0;
+  width: 360px;
+  max-width: 85vw;
+  text-align: center;
+  padding: 40px 28px;
+  background: var(--color-cf-white);
+  border: 1.5px solid var(--color-cf-line);
+  border-radius: 16px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.lnd-testimonial-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 16px;
+  background: var(--color-cf-cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-cf-muted);
+}
+
+/* ─── Navbar transitions ─── */
+.lnd-nav {
+  transition: background-color 0.4s ease, backdrop-filter 0.4s ease, box-shadow 0.4s ease;
+}
+
+.lnd-nav--solid {
+  background-color: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.lnd-nav--transparent {
+  background-color: transparent;
+}
+
+/* Nav link active marker */
+.lnd-nav-link {
+  position: relative;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.6);
+  transition: color 0.2s ease;
+  padding: 6px 12px;
+  text-decoration: none;
+}
+
+.lnd-nav-link:hover,
+.lnd-nav-link--active {
+  color: #ffffff;
+}
+
+/* ─── About frame content reveal ─── */
+.lnd-about-block {
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lnd-about-block--hidden {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.lnd-about-block--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children */
+.lnd-stagger > *:nth-child(1) { transition-delay: 0s; }
+.lnd-stagger > *:nth-child(2) { transition-delay: 0.1s; }
+.lnd-stagger > *:nth-child(3) { transition-delay: 0.2s; }
+.lnd-stagger > *:nth-child(4) { transition-delay: 0.3s; }
+
+/* ─── prefers-reduced-motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .lnd-frame,
+  .lnd-process-card,
+  .lnd-features-scene,
+  .lnd-feature-col,
+  .lnd-about-block {
+    transition-duration: 0.001ms !important;
+    transform: none !important;
+  }
+
+  .lnd-frame--hidden {
+    opacity: 0;
+    transform: none;
+  }
+
+  .lnd-frame--visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  .lnd-hero-wordmark,
+  .lnd-hero-tagline {
+    animation: none !important;
+    opacity: 1;
+  }
+
+  .lnd-card-pop {
+    animation: none !important;
+    opacity: 1;
+  }
+
+  .lnd-pinned-inner {
+    position: relative;
+    height: auto;
+  }
+
+  .lnd-pinned {
+    height: auto !important;
+  }
+
+  .lnd-testimonials-track {
+    transition: none !important;
+  }
+}
+
+/* ─── Mobile overrides ─── */
+@media (max-width: 768px) {
+  .lnd-process-card {
+    width: 100%;
+    max-width: 100%;
+    position: relative;
+  }
+
+  .lnd-process-card[data-index="0"],
+  .lnd-process-card[data-index="1"],
+  .lnd-process-card[data-index="2"] {
+    transform: none;
+  }
+
+  .lnd-cards-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .lnd-cards-row .lnd-process-card {
+    width: 100%;
+  }
+
+  .lnd-testimonial-card {
+    width: 300px;
+  }
+}
