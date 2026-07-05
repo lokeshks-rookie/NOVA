@@ -12,19 +12,23 @@ import api from "@/lib/api"
 export default function ItemDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { addToast } = useApp()
+  const { user, addToast } = useApp()
 
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [userClaimStatus, setUserClaimStatus] = useState(null)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(false)
 
-    api.get(`/items/${id}`)
-      .then((res) => {
+    Promise.all([
+      api.get(`/items/${id}`),
+      user ? api.get(`/claims/check/${id}`).catch(() => null) : Promise.resolve(null)
+    ])
+      .then(([itemRes, claimRes]) => {
         if (cancelled) return
         const d = res?.data
         setItem({
@@ -40,6 +44,10 @@ export default function ItemDetailPage() {
           reportedBy: d.reportedBy?.name || "a campus member",
           challengeQuestion: d.challengeQuestions?.[0] || null,
         })
+
+        if (claimRes?.data?.hasClaim) {
+          setUserClaimStatus(claimRes.data.claimStatus)
+        }
       })
       .catch(() => {
         if (!cancelled) setError(true)
@@ -49,7 +57,7 @@ export default function ItemDetailPage() {
       })
 
     return () => { cancelled = true }
-  }, [id])
+  }, [id, user])
 
   if (loading) {
     return (
@@ -78,6 +86,22 @@ export default function ItemDetailPage() {
   }
 
   const actionCard = () => {
+    if (userClaimStatus === "pending" || userClaimStatus === "approved") {
+      return (
+        <div className="space-y-4 rounded-2xl border border-cf-yellow bg-cf-yellow/10 p-6">
+          <h3 className="text-lg font-semibold">{userClaimStatus === "approved" ? "Claim approved" : "Claim under review"}</h3>
+          <p className="text-sm leading-relaxed text-cf-muted">
+            {userClaimStatus === "approved" 
+              ? "Your claim for this item has been approved. Check your notifications for pickup details."
+              : "Your claim for this item is currently being reviewed by the admin team."}
+          </p>
+          <Button disabled className="w-full">
+            {userClaimStatus === "approved" ? "Claim approved" : "Claim under review"}
+          </Button>
+        </div>
+      )
+    }
+
     if (item.status === "open") {
       if (item.type === "lost") {
         return (

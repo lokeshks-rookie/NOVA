@@ -86,12 +86,8 @@ export const createClaim = async (req, res, next) => {
 
     const claim = await Claim.create(claimData);
 
-    // Update item status based on automatic verification
-    if (status === "approved") {
-      await Item.findByIdAndUpdate(itemId, { status: "claimed" });
-    } else if (status === "pending") {
-      await Item.findByIdAndUpdate(itemId, { status: "pending_claim" });
-    }
+    // The item's global status remains 'open' so other users can submit claims if needed.
+    // The admin will manually verify and close the item later.
 
     // Notify the reporter
     await Notification.create({
@@ -251,6 +247,25 @@ export const rejectClaim = async (req, res, next) => {
     });
 
     res.json({ success: true, data: claim });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Check if current user has a claim for an item
+// @route   GET /api/claims/check/:itemId
+export const checkUserClaim = async (req, res, next) => {
+  try {
+    const claim = await Claim.findOne({
+      item: req.params.itemId,
+      claimant: req.user._id,
+    });
+
+    if (claim) {
+      res.json({ success: true, hasClaim: true, claimStatus: claim.status });
+    } else {
+      res.json({ success: true, hasClaim: false });
+    }
   } catch (error) {
     next(error);
   }

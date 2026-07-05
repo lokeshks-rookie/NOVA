@@ -6,9 +6,13 @@ import {
   getAllClaims,
   approveClaim,
   rejectClaim,
+  checkUserClaim,
 } from "../controllers/claimController.js";
 
 const router = Router();
+
+// GET  /api/claims/check/:itemId → check if current user has a claim
+router.get("/check/:itemId", verifyToken, checkUserClaim);
 
 // GET  /api/claims/mine          → current user's claims
 router.get("/mine", verifyToken, getMyClaims);
