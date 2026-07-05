@@ -30,7 +30,7 @@ export default function ItemDetailPage() {
     ])
       .then(([itemRes, claimRes]) => {
         if (cancelled) return
-        const d = res?.data
+        const d = itemRes?.data
         setItem({
           id: d._id || d.id,
           type: d.type,
