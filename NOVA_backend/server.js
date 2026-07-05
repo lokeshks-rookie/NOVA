@@ -25,7 +25,7 @@ app.use(
   cors({
     origin: [
       process.env.CLIENT_URL || 'http://localhost:3000', // keep for local dev
-      'https://nova-frontend-five.vercel.app',        // replace with your actual Vercel URL later
+      'https://nova-lost-and-found.vercel.app',        // replace with your actual Vercel URL later
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
