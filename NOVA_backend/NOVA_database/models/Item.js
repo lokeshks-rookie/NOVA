@@ -124,13 +124,12 @@ itemSchema.index(
 );
 
 // ── Generate reference number before save ──────────────────────────────────
-itemSchema.pre("save", function (next) {
+itemSchema.pre("save", function () {
   if (!this.referenceNumber) {
     const timestampPart = Date.now().toString(36).slice(-4).toUpperCase();
     const randomPart = Math.random().toString(36).slice(2, 4).toUpperCase();
     this.referenceNumber = `CF-${timestampPart}${randomPart}`;
   }
-  next();
 });
 
 const Item = mongoose.model("Item", itemSchema);
