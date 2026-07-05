@@ -24,7 +24,7 @@ app.use(
   cors({
     origin: [
       process.env.CLIENT_URL || 'http://localhost:3000', // keep for local dev
-      'https://nova-frontend.vercel.app',                // replace with your actual Vercel URL later
+      'https://nova-frontend-five.vercel.app',        // replace with your actual Vercel URL later
     ],
     credentials: true, // allow cookies to be sent cross-origin (required for auth)
   })
