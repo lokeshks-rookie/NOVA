@@ -31,7 +31,6 @@ app.use(
     credentials: true, // allow cookies to be sent cross-origin (required for auth)
   })
 );
-app.options('*', cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
