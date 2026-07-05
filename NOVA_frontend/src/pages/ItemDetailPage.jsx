@@ -86,8 +86,8 @@ export default function ItemDetailPage() {
             <p className="text-sm leading-relaxed text-cf-muted">
               If you ever find this lost item, report the item here so that it could reach the owner.
             </p>
-            {/* NAV → /report — begin report flow */}
-            <Button as={Link} to="/report" className="w-full" badge>
+            {/* NAV → /claim/:itemId — begin report found flow */}
+            <Button as={Link} to={`/claim/${item.id}?intent=found`} className="w-full" badge>
               Report found item
             </Button>
           </div>

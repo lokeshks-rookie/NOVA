@@ -27,6 +27,11 @@ const claimSchema = new mongoose.Schema(
       type: String, // optional proof photo (receipt, old photo with item)
       default: null,
     },
+    claimType: {
+      type: String,
+      enum: ["ownership", "found_submission"],
+      default: "ownership",
+    },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],

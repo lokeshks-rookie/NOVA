@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Link, useParams, useNavigate } from "react-router-dom"
+import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { ArrowLeft, Upload, Check, X } from "lucide-react"
 import { Logo } from "@/components/Logo"
 import { Eyebrow } from "@/components/Eyebrow"
@@ -14,6 +14,9 @@ const STEPS = ["Verify your identity", "Prove ownership", "Claim submitted"]
 export default function ClaimPage() {
   const { itemId } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const intent = searchParams.get("intent")
+  const isFound = intent === "found"
   const { user, addToast } = useApp()
   const [step, setStep] = useState(0)
   const [answer, setAnswer] = useState("")
@@ -81,9 +84,12 @@ export default function ClaimPage() {
           ? [{ question: item.challengeQuestion, answer: answer }]
           : [],
         proofImageUrl,
+        ...(isFound ? { intent: "found" } : {})
       })
       setStep(2)
-      addToast({ variant: "success", title: "Claim submitted", message: `Reference: ${refNum}` })
+      if (!isFound) {
+        addToast({ variant: "success", title: "Claim submitted", message: `Reference: ${refNum}` })
+      }
     } catch (err) {
       addToast({ variant: "error", title: "Claim failed", message: err.message || "Please try again." })
     } finally {
@@ -113,7 +119,7 @@ export default function ClaimPage() {
           {step === 0 && (
             <div className="cf-fade-in space-y-6">
               <Eyebrow className="text-cf-muted">Step 01 of 03 — verify your identity</Eyebrow>
-              <h2 className="cf-h1 mt-3">Confirm your details</h2>
+              <h2 className="cf-h1 mt-3">{isFound ? "Submit Found Item Report" : "Confirm your details"}</h2>
               <p className="text-[15px] leading-relaxed text-cf-muted">
                 Before you proceed, confirm this information matches your campus ID.
               </p>
@@ -121,8 +127,15 @@ export default function ClaimPage() {
               <div className="space-y-4 rounded-2xl border border-cf-line bg-cf-cream p-6">
                 <ReadOnlyField label="Full name" value={user?.name} />
                 <ReadOnlyField label="Email" value={user?.email} />
-                <ReadOnlyField label="Role" value={user?.role} />
                 <ReadOnlyField label="Mobile" value={user?.mobile} />
+                {isFound ? (
+                  <>
+                    <ReadOnlyField label="Department" value={user?.department} />
+                    <ReadOnlyField label="ID Number" value={user?.idNumber} />
+                  </>
+                ) : (
+                  <ReadOnlyField label="Role" value={user?.role} />
+                )}
               </div>
 
               <Button onClick={() => setStep(1)} className="w-full" badge>
@@ -135,7 +148,7 @@ export default function ClaimPage() {
           {step === 1 && (
             <div className="cf-fade-in space-y-6">
               <Eyebrow className="text-cf-muted">Step 02 of 03 — prove ownership</Eyebrow>
-              <h2 className="cf-h1 mt-3">Answer the verification question</h2>
+              <h2 className="cf-h1 mt-3">{isFound ? "Submit Found Item Report" : "Answer the verification question"}</h2>
 
               <div className="rounded-2xl border border-cf-yellow bg-cf-yellow/20 p-6">
                 <p className="text-sm font-medium text-cf-black">
@@ -188,7 +201,7 @@ export default function ClaimPage() {
                   Back
                 </Button>
                 <Button onClick={handleSubmitClaim} disabled={!answer.trim() || submitting} className="flex-1" badge>
-                  {submitting ? "Submitting..." : "Submit claim"}
+                  {submitting ? "Submitting..." : (isFound ? "Submit Claim" : "Submit claim")}
                 </Button>
               </div>
             </div>
@@ -196,6 +209,19 @@ export default function ClaimPage() {
 
           {/* ── Step 03: Confirmation ─────────────────────────────── */}
           {step === 2 && (
+            isFound ? (
+              <div className="cf-fade-in flex flex-col items-center px-6 py-8 text-center">
+                <div className="mt-8 flex h-24 w-24 items-center justify-center rounded-full bg-cf-yellow">
+                  <Check className="h-12 w-12 text-cf-black" strokeWidth={2.5} />
+                </div>
+                <p className="mt-8 text-lg font-medium text-cf-black">
+                  Your claim has been submitted to the admin. You can hand over this item at the NOVA counter near the main office.
+                </p>
+                <Button as={Link} to="/dashboard" className="mt-8 w-full max-w-md" badge>
+                  Back to Home
+                </Button>
+              </div>
+            ) : (
             <div className="cf-fade-in flex flex-col items-center px-6 py-8 text-center">
               <Eyebrow className="text-cf-muted">Step 03 of 03 — claim submitted</Eyebrow>
 
@@ -231,6 +257,7 @@ export default function ClaimPage() {
                 Track this claim
               </Button>
             </div>
+            )
           )}
         </div>
       </div>

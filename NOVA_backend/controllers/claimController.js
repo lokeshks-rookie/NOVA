@@ -12,7 +12,7 @@ import {
 // @route   POST /api/claims
 export const createClaim = async (req, res, next) => {
   try {
-    const { itemId, answers, proofImageUrl } = req.body;
+    const { itemId, answers, proofImageUrl, intent } = req.body;
 
     const item = await Item.findById(itemId);
     if (!item) {
@@ -20,7 +20,7 @@ export const createClaim = async (req, res, next) => {
     }
 
     // Prevent claims on "lost" items (they should be reported as "found" instead)
-    if (item.type === "lost") {
+    if (item.type === "lost" && intent !== "found") {
       return res
         .status(400)
         .json({ success: false, message: "Cannot claim a lost item. Please report it as found instead." });
@@ -69,7 +69,7 @@ export const createClaim = async (req, res, next) => {
       }
     }
 
-    const claim = await Claim.create({
+    const claimData = {
       item: itemId,
       claimant: req.user._id,
       answers: answers || [],
@@ -78,7 +78,12 @@ export const createClaim = async (req, res, next) => {
       pickupPin,
       pickupInfo,
       rejectReason,
-    });
+    };
+    if (intent === "found") {
+      claimData.claimType = "found_submission";
+    }
+
+    const claim = await Claim.create(claimData);
 
     // Update item status based on automatic verification
     if (status === "approved") {
