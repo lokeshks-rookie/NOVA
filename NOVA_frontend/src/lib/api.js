@@ -4,7 +4,7 @@
 //         const items = await api.get("/items?q=airpods")
 //         const newItem = await api.post("/items", { title: "..." })
 
-const BASE_URL = "/api"
+const BASE_URL = import.meta.env.VITE_API_BASE_URL + "/api"
 
 class ApiError extends Error {
   constructor(message, status, data) {
