@@ -191,7 +191,7 @@ export default function SignupPage() {
 
     try {
       const data = await api.post("/auth/signup", payload);
-      
+
       if (data.token) {
         localStorage.setItem("cf_token", data.token);
       }
@@ -215,7 +215,7 @@ export default function SignupPage() {
     // sets a JWT, and redirects to /dashboard.
     // If the user already exists, they are logged in and sent to /dashboard.
     // NAVIGATION → /api/auth/google → Google consent → /dashboard
-    window.location.href = "/api/auth/google";
+    window.location.href = `${import.meta.env.VITE_API_BASE_URL}/api/auth/google`;
   };
 
   // ─── Derived helpers ──────────────────────────────────────────
