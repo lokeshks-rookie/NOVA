@@ -6,8 +6,8 @@ import { Item } from "../NOVA_database/models/index.js";
 
 // Common words to ignore during local keyword fallback matching
 const STOPWORDS = new Set([
-  "the", "and", "for", "with", "this", "that", "from", "have", "has", "had", 
-  "are", "was", "were", "you", "your", "lost", "found", "about", "some", 
+  "the", "and", "for", "with", "this", "that", "from", "have", "has", "had",
+  "are", "was", "were", "you", "your", "lost", "found", "about", "some",
   "here", "there", "who", "what", "where", "when", "why", "how", "this", "that"
 ]);
 
@@ -25,7 +25,7 @@ const fetchImageAsBase64 = async (url) => {
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const mimeType = response.headers.get("content-type") || "image/jpeg";
-    
+
     return {
       mimeType,
       data: buffer.toString("base64"),
@@ -83,7 +83,7 @@ export const validateReportIntegrity = async (title, description, category, type
     contents.push(prompt);
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       contents: contents,
       config: {
         responseMimeType: "application/json",
@@ -142,7 +142,7 @@ export const chatAssistant = async (messagesHistory) => {
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       contents: contents,
       config: {
         systemInstruction: systemInstruction,
@@ -152,30 +152,28 @@ export const chatAssistant = async (messagesHistory) => {
     return response.text;
   } catch (error) {
     console.error("❌ Gemini Chat Assistant failed:", error.message);
-    
+
     // Fallback: Perform local search on the database items when Gemini is exhausted or offline
     try {
       const userMessage = messagesHistory[messagesHistory.length - 1]?.content?.toLowerCase() || "";
       const dbItems = await Item.find({ status: "open" });
-      
+      const words = userMessage.split(/[\s,./?!;:]+/).filter(w => w.length >= 3 && !STOPWORDS.has(w));
+
       const matches = dbItems.filter(item => {
         const title = item.title.toLowerCase();
         const desc = item.description.toLowerCase();
         const location = item.location.toLowerCase();
         const category = item.category.toLowerCase();
-        
-        // Split user input into words of at least 3 characters and filter out stopwords
-        const words = userMessage.split(/[\s,./?!;:]+/).filter(w => w.length >= 3 && !STOPWORDS.has(w));
-        
+
         // Check if any word from the user's message matches item details
-        return words.some(word => 
-          title.includes(word) || 
-          desc.includes(word) || 
-          location.includes(word) || 
+        return words.some(word =>
+          title.includes(word) ||
+          desc.includes(word) ||
+          location.includes(word) ||
           category.includes(word)
         );
       });
-      
+
       if (matches.length > 0) {
         let reply = `I checked the live database and found these active items matching your query:\n\n`;
         matches.forEach(item => {
@@ -234,7 +232,7 @@ export const filterSearchItems = async (query, dbItems) => {
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -245,7 +243,7 @@ export const filterSearchItems = async (query, dbItems) => {
     return parsedResults; // Array of { id, score }
   } catch (error) {
     console.error("❌ Gemini semantic search failed:", error.message);
-    
+
     // Fallback: Perform local search on the database items when Gemini is exhausted or offline
     try {
       if (!query || !dbItems || dbItems.length === 0) {
@@ -259,14 +257,14 @@ export const filterSearchItems = async (query, dbItems) => {
           const desc = item.description.toLowerCase();
           const location = item.location.toLowerCase();
           const category = item.category.toLowerCase();
-          
+
           words.forEach(word => {
             if (title.includes(word)) score += 50;
             else if (desc.includes(word)) score += 30;
             else if (location.includes(word)) score += 20;
             else if (category.includes(word)) score += 10;
           });
-          
+
           return { id: item._id.toString(), score: Math.min(score, 100) };
         })
         .filter(match => match.score >= 30)
