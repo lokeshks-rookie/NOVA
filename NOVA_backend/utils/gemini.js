@@ -134,9 +134,10 @@ export const chatAssistant = async (messagesHistory) => {
       
       Key guidelines:
       - Be warm, helpful, and concise.
+      - If the user is just saying hello or asking a general question, reply naturally and conversationally without searching the database.
       - If a user asks if someone has found/lost a specific item (e.g. "Has anyone found a blue ID card?" or "I lost my backpack"), search the "Live List of Open Items" above.
-      - If you find a matching item, list its title, location, and category, and direct them to click "Search Items" in the sidebar to search for it and initiate a claim.
-      - If you do not find a matching item in the list, tell them: "I checked the database and couldn't find a matching open report. I suggest you click 'Report Item' in the sidebar to raise a report."
+      - If they ask about a specific item and you find a matching item, list its title, location, and category, and direct them to click "Search Items" in the sidebar to search for it and initiate a claim.
+      - If they ask about a specific item and you do NOT find a matching item in the list, tell them: "I checked the database and couldn't find a matching open report. I suggest you click 'Report Item' in the sidebar to raise a report."
       - Keep responses short and use bullet points for clarity.
     `;
 
@@ -176,14 +177,17 @@ export const chatAssistant = async (messagesHistory) => {
       });
       
       if (matches.length > 0) {
-        let reply = `🤖 **Nova Assistant (Local Search Backup):**\n\nI checked the live database and found these active items matching your query:\n\n`;
+        let reply = `I checked the live database and found these active items matching your query:\n\n`;
         matches.forEach(item => {
           reply += `- **[${item.type.toUpperCase()}]** "${item.title}" in *${item.location}* (${item.category})\n  *Description:* ${item.description}\n`;
         });
         reply += `\nGo ahead and click **"Search Items"** in the sidebar to search for them and raise a claim!`;
         return reply;
       } else {
-        return `🤖 **Nova Assistant (Local Search Backup):**\n\nI checked the database but couldn't find any matching open reports for your query. I suggest clicking **"Report Item"** in the sidebar to register it!`;
+        if (words.length === 0 || /^(hi|hey|hello|greetings|howdy)\b/i.test(userMessage.trim())) {
+          return "Hello! I am Nova Assistant. How can I help you with the Campus Lost & Found today?";
+        }
+        return `I checked the database but couldn't find any matching open reports for your query. I suggest clicking **"Report Item"** in the sidebar to register it!`;
       }
     } catch (fallbackError) {
       console.error("❌ Fallback local search failed:", fallbackError.message);

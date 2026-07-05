@@ -36,12 +36,12 @@ const FOOTER_COLS = [
   },
 ]
 
-// Social links — hrefs as placeholders for now
+// Social links
 const SOCIALS = [
-  { icon: Linkedin, label: "LinkedIn", href: "#" },
-  { icon: Instagram, label: "Instagram", href: "#" },
-  { icon: Twitter, label: "X (Twitter)", href: "#" },
-  { icon: MessageCircle, label: "WhatsApp", href: "#" },
+  { icon: Linkedin, label: "LinkedIn", href: "https://www.linkedin.com/in/lokesh-k-s-500320324/" },
+  { icon: Instagram, label: "Instagram", href: "https://www.instagram.com/_.lokesh._.k.s/" },
+  { icon: Twitter, label: "X (Twitter)", href: "https://x.com/KSLokesh1045358" },
+  { icon: MessageCircle, label: "WhatsApp", href: "https://wa.me/918680801237" },
 ]
 
 export function LandingFooter() {
@@ -70,6 +70,8 @@ export function LandingFooter() {
                 <a
                   key={social.label}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={social.label}
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-cf-white/10 text-cf-white/50 transition-colors hover:border-cf-white/30 hover:text-cf-white"
                 >

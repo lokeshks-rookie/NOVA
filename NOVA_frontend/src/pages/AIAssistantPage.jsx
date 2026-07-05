@@ -1,39 +1,13 @@
 import { useState, useRef, useEffect } from "react"
 import { Trash2, ArrowUp } from "lucide-react"
 import { Eyebrow } from "@/components/Eyebrow"
-import { Button } from "@/components/ui/Button"
 import { useApp } from "@/context/AppContext"
-import { mockItems, aiSuggestedPrompts } from "@/data/mock"
+import { aiSuggestedPrompts } from "@/data/mock"
 import { cn } from "@/lib/utils"
 import api from "@/lib/api"
 
-// Simple mock AI response generator (fallback)
-function generateResponse(input) {
-  const q = input.toLowerCase()
-
-  if (q.includes("claim") || q.includes("process")) {
-    return "The claim process has three steps:\n\n01. Answer the verification question set by the finder.\n02. An admin reviews your claim within 24 hours.\n03. Once approved, collect your item from the Lost & Found desk with your pickup PIN.\n\nYou can start a claim from any item's detail page."
-  }
-
-  if (q.includes("today") || q.includes("recent")) {
-    const recent = mockItems.slice(0, 3)
-    return `Here are items reported recently:\n\n${recent.map((i) => `• ${i.title} — ${i.location} (${i.type})`).join("\n")}\n\nWould you like me to search for something specific?`
-  }
-
-  // Try to match items
-  const matches = mockItems.filter(
-    (i) => i.title.toLowerCase().includes(q) || i.description.toLowerCase().includes(q) || i.category.toLowerCase().includes(q),
-  )
-
-  if (matches.length > 0) {
-    return `I found ${matches.length} item${matches.length > 1 ? "s" : ""} that might match:\n\n${matches.map((i) => `• ${i.title} — ${i.location} (${i.type}, ${i.status})`).join("\n")}\n\nYou can view the full details and claim any of these from the Search page.`
-  }
-
-  return "I couldn't find an exact match for that description right now. Try describing it differently, or save a search — we'll notify you if something matching gets reported.\n\nYou can also try browsing by category on the Search page."
-}
-
 export default function AIAssistantPage() {
-  const { user } = useApp()
+  useApp() // ensures user context is available
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)

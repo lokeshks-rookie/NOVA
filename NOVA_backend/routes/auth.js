@@ -101,7 +101,7 @@ router.get("/google", (_req, res) => {
     res.cookie("oauth_state", state, {
       httpOnly: true,
       secure: isProduction(),
-      sameSite: "lax",
+      sameSite: isProduction() ? "none" : "lax",
       maxAge: 5 * 60 * 1000, // 5 minutes
       path: "/",
     });
@@ -220,7 +220,7 @@ router.get("/google/callback", async (req, res) => {
     res.cookie("cf_token", token, {
       httpOnly: true,
       secure: isProduction(),
-      sameSite: "lax",
+      sameSite: isProduction() ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: "/",
     });
@@ -299,7 +299,7 @@ router.post("/signup", authLimiter, async (req, res) => {
     res.cookie("cf_token", token, {
       httpOnly: true,
       secure: isProduction(),
-      sameSite: "lax",
+      sameSite: isProduction() ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
@@ -351,7 +351,7 @@ router.post("/login", authLimiter, async (req, res) => {
     res.cookie("cf_token", token, {
       httpOnly: true,
       secure: isProduction(),
-      sameSite: "lax",
+      sameSite: isProduction() ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
