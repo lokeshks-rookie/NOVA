@@ -127,7 +127,7 @@ router.get("/google", (_req, res) => {
 //  consent. Validates state, exchanges code for tokens, verifies the
 //  ID token, finds/creates the user, and redirects to the frontend.
 // ════════════════════════════════════════════════════════════════════
-router.get("/google/callback", async (req, res) => {
+router.get("/google/callback", async (req, res, next) => {
   const { code, state, error: oauthError } = req.query;
 
   // ── 1. Handle user denial or Google errors ────────────────────
@@ -244,7 +244,7 @@ router.get("/google/callback", async (req, res) => {
       console.error("   → ID token expired");
     }
 
-    res.redirect(`${CLIENT_URL}/login?error=google_auth_failed`);
+    next(err);
   }
 });
 
@@ -252,7 +252,7 @@ router.get("/google/callback", async (req, res) => {
 //  POST /api/auth/signup
 //  Registers a new user via local email/password.
 // ════════════════════════════════════════════════════════════════════
-router.post("/signup", authLimiter, async (req, res) => {
+router.post("/signup", authLimiter, async (req, res, next) => {
   try {
     const {
       role,
@@ -307,7 +307,7 @@ router.post("/signup", authLimiter, async (req, res) => {
     res.status(201).json({ success: true, token, user: userPayload });
   } catch (error) {
     console.error("❌  Signup error:", error.message);
-    res.status(500).json({ success: false, message: "Server error during registration." });
+    next(error);
   }
 });
 
@@ -315,7 +315,7 @@ router.post("/signup", authLimiter, async (req, res) => {
 //  POST /api/auth/login
 //  Authenticates a user via local email/password.
 // ════════════════════════════════════════════════════════════════════
-router.post("/login", authLimiter, async (req, res) => {
+router.post("/login", authLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -359,7 +359,7 @@ router.post("/login", authLimiter, async (req, res) => {
     res.status(200).json({ success: true, token, user: userPayload });
   } catch (error) {
     console.error("❌  Login error:", error.message);
-    res.status(500).json({ success: false, message: "Server error during login." });
+    next(error);
   }
 });
 
@@ -368,7 +368,7 @@ router.post("/login", authLimiter, async (req, res) => {
 //  Returns the authenticated user's profile. Used by the frontend to
 //  rehydrate user state on page refresh.
 // ════════════════════════════════════════════════════════════════════
-router.get("/me", verifyToken, async (req, res) => {
+router.get("/me", verifyToken, async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).select("-password");
     if (!user) {
@@ -377,7 +377,7 @@ router.get("/me", verifyToken, async (req, res) => {
     res.json({ success: true, data: buildUserPayload(user) });
   } catch (err) {
     console.error("❌  Error fetching profile:", err.message);
-    res.status(500).json({ success: false, message: "Failed to fetch profile" });
+    next(err);
   }
 });
 
@@ -386,7 +386,7 @@ router.get("/me", verifyToken, async (req, res) => {
 //  Updates the authenticated user's mutable profile fields:
 //  name, mobile, department, year.
 // ════════════════════════════════════════════════════════════════════
-router.patch("/profile", verifyToken, async (req, res) => {
+router.patch("/profile", verifyToken, async (req, res, next) => {
   try {
     const { name, mobile, department, year } = req.body;
 
@@ -406,7 +406,7 @@ router.patch("/profile", verifyToken, async (req, res) => {
     res.json({ success: true, data: buildUserPayload(user) });
   } catch (err) {
     console.error("❌  Error updating profile:", err.message);
-    res.status(500).json({ success: false, message: "Failed to update profile" });
+    next(err);
   }
 });
 
