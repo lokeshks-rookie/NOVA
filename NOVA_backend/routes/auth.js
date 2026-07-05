@@ -13,7 +13,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import rateLimit from "express-rate-limit";
-import User from "../../NOVA_database/models/User.js";
+import User from "../NOVA_database/models/User.js";
 import { verifyToken } from "../middleware/auth.js";
 
 // Rate limiter for auth endpoints (max 15 attempts per 15 minutes per IP)

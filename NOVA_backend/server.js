@@ -5,7 +5,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import connectDB from "./database/connection.js";
+import connectDB from "./NOVA_database/connection.js";
 import errorHandler from "./middleware/errorHandler.js";
 
 // Route imports

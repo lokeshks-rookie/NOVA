@@ -1,7 +1,7 @@
 // ─── SearchAlert Controller ────────────────────────────────────────────────
 // Saved searches — CRUD + toggle for current user.
 
-import { SearchAlert, AuditLog } from "../../NOVA_database/models/index.js";
+import { SearchAlert, AuditLog } from "../NOVA_database/models/index.js";
 
 // @desc    Get current user's saved searches
 // @route   GET /api/search-alerts

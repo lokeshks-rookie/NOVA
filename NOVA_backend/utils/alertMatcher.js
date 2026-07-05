@@ -3,7 +3,7 @@
 // Notifications for users whose saved search matches the new item.
 // Phase 2: Also sends Email / SMS based on user preferences & alert settings.
 
-import { SearchAlert, Notification } from "../../NOVA_database/models/index.js";
+import { SearchAlert, Notification } from "../NOVA_database/models/index.js";
 import { sendMatchEmail } from "./emailService.js";
 
 /**

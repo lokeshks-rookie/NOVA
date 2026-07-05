@@ -1,7 +1,7 @@
 // ─── Item Controller ───────────────────────────────────────────────────────
 // Handles CRUD + text search for lost/found items.
 
-import { Item, AuditLog } from "../../NOVA_database/models/index.js";
+import { Item, AuditLog } from "../NOVA_database/models/index.js";
 import { checkAlertsOnNewItem } from "../utils/alertMatcher.js";
 import { validateReportIntegrity, filterSearchItems } from "../utils/gemini.js";
 

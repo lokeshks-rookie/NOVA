@@ -1,7 +1,7 @@
 // ─── Notification Controller ───────────────────────────────────────────────
 // Fetch, mark-read for user's notifications.
 
-import { Notification } from "../../NOVA_database/models/index.js";
+import { Notification } from "../NOVA_database/models/index.js";
 
 // @desc    Get current user's notifications
 // @route   GET /api/notifications

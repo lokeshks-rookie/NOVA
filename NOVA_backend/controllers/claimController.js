@@ -6,7 +6,7 @@ import {
   Item,
   Notification,
   AuditLog,
-} from "../../NOVA_database/models/index.js";
+} from "../NOVA_database/models/index.js";
 
 // @desc    Submit a new claim for an item
 // @route   POST /api/claims

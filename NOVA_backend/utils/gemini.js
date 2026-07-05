@@ -2,7 +2,7 @@
 // Uses the official @google/genai SDK to connect to Gemini 2.5 Flash.
 
 import { GoogleGenAI } from "@google/genai";
-import { Item } from "../../NOVA_database/models/index.js";
+import { Item } from "../NOVA_database/models/index.js";
 
 // Common words to ignore during local keyword fallback matching
 const STOPWORDS = new Set([
