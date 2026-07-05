@@ -12,7 +12,7 @@ import {
 // @route   POST /api/claims
 export const createClaim = async (req, res, next) => {
   try {
-    const { itemId, answers, proofImageUrl, intent } = req.body;
+    const { itemId, answers, proofImageUrl, intent, foundDetails } = req.body;
 
     const item = await Item.findById(itemId);
     if (!item) {
@@ -44,7 +44,7 @@ export const createClaim = async (req, res, next) => {
     let pickupInfo = null;
 
     // Automatic verification based on the challenge answer
-    if (item.challengeQuestions && item.challengeQuestions.length > 0) {
+    if (intent !== "found" && item.challengeQuestions && item.challengeQuestions.length > 0) {
       const normalize = (str) => {
         if (!str) return "";
         return str
@@ -81,6 +81,7 @@ export const createClaim = async (req, res, next) => {
     };
     if (intent === "found") {
       claimData.claimType = "found_submission";
+      claimData.foundDetails = foundDetails || null;
     }
 
     const claim = await Claim.create(claimData);

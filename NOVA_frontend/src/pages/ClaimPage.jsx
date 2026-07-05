@@ -20,6 +20,7 @@ export default function ClaimPage() {
   const { user, addToast } = useApp()
   const [step, setStep] = useState(0)
   const [answer, setAnswer] = useState("")
+  const [foundDetails, setFoundDetails] = useState("")
   const [proofPhoto, setProofPhoto] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -80,11 +81,11 @@ export default function ClaimPage() {
 
       await api.post("/claims", {
         itemId: item.id,
-        answers: item.challengeQuestion
+        answers: (!isFound && item.challengeQuestion)
           ? [{ question: item.challengeQuestion, answer: answer }]
           : [],
         proofImageUrl,
-        ...(isFound ? { intent: "found" } : {})
+        ...(isFound ? { intent: "found", foundDetails } : {})
       })
       setStep(2)
       if (!isFound) {
@@ -147,33 +148,50 @@ export default function ClaimPage() {
           {/* ── Step 02: Ownership Verification ───────────────────── */}
           {step === 1 && (
             <div className="cf-fade-in space-y-6">
-              <Eyebrow className="text-cf-muted">Step 02 of 03 — prove ownership</Eyebrow>
-              <h2 className="cf-h1 mt-3">{isFound ? "Submit Found Item Report" : "Answer the verification question"}</h2>
+              <Eyebrow className="text-cf-muted">{isFound ? "Step 02 of 03 — provide details" : "Step 02 of 03 — prove ownership"}</Eyebrow>
+              <h2 className="cf-h1 mt-3">{isFound ? "Provide details of your claim" : "Answer the verification question"}</h2>
 
-              <div className="rounded-2xl border border-cf-yellow bg-cf-yellow/20 p-6">
-                <p className="text-sm font-medium text-cf-black">
-                  Answer the question below. This was set by the person who found your item.
-                  Only the true owner would know the answer.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <Label>Challenge question</Label>
-                  <p className="mt-1 rounded-xl border border-cf-line bg-cf-cream px-4 py-3 text-[15px] font-medium text-cf-black">
-                    {item.challengeQuestion || "No challenge question set for this item."}
+              {!isFound && (
+                <div className="rounded-2xl border border-cf-yellow bg-cf-yellow/20 p-6">
+                  <p className="text-sm font-medium text-cf-black">
+                    Answer the question below. This was set by the person who found your item.
+                    Only the true owner would know the answer.
                   </p>
                 </div>
+              )}
 
-                <div>
-                  <Label htmlFor="cl-answer">Your answer</Label>
-                  <Input
-                    id="cl-answer"
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    placeholder="Type your answer here..."
-                  />
-                </div>
+              <div className="space-y-4">
+                {!isFound ? (
+                  <>
+                    <div>
+                      <Label>Challenge question</Label>
+                      <p className="mt-1 rounded-xl border border-cf-line bg-cf-cream px-4 py-3 text-[15px] font-medium text-cf-black">
+                        {item.challengeQuestion || "No challenge question set for this item."}
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="cl-answer">Your answer</Label>
+                      <Input
+                        id="cl-answer"
+                        value={answer}
+                        onChange={(e) => setAnswer(e.target.value)}
+                        placeholder="Type your answer here..."
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <Label htmlFor="cl-found-details">Tell us, where and how did you find this</Label>
+                    <Textarea
+                      id="cl-found-details"
+                      value={foundDetails}
+                      onChange={(e) => setFoundDetails(e.target.value)}
+                      placeholder="Enter details here..."
+                      rows={4}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <Label>Upload proof (optional but recommended)</Label>
@@ -200,7 +218,7 @@ export default function ClaimPage() {
                 <Button variant="secondary" onClick={() => setStep(0)} className="flex-1">
                   Back
                 </Button>
-                <Button onClick={handleSubmitClaim} disabled={!answer.trim() || submitting} className="flex-1" badge>
+                <Button onClick={handleSubmitClaim} disabled={(isFound ? !foundDetails.trim() : !answer.trim()) || submitting} className="flex-1" badge>
                   {submitting ? "Submitting..." : (isFound ? "Submit Claim" : "Submit claim")}
                 </Button>
               </div>

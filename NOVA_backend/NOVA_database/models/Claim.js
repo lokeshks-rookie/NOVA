@@ -32,6 +32,10 @@ const claimSchema = new mongoose.Schema(
       enum: ["ownership", "found_submission"],
       default: "ownership",
     },
+    foundDetails: {
+      type: String, // details provided by the finder
+      default: null,
+    },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
