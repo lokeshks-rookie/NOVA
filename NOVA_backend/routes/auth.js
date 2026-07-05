@@ -94,29 +94,14 @@ function isProduction() {
 // ════════════════════════════════════════════════════════════════════
 router.get("/google", (_req, res) => {
   try {
-    // Generate a random state nonce for CSRF protection
-    const state = crypto.randomBytes(32).toString("hex");
-
-    // Store state in a short-lived httpOnly cookie (5 min expiry)
-    res.cookie("oauth_state", state, {
-      httpOnly: true,
-      secure: isProduction(),
-      sameSite: isProduction() ? "none" : "lax",
-      maxAge: 5 * 60 * 1000, // 5 minutes
-      path: "/",
-    });
-
-    // Build the Google OAuth consent URL
     const authUrl = oAuth2Client.generateAuthUrl({
       access_type: "offline",
       scope: ["profile", "email"],
-      state,
       prompt: "consent",
     });
-
     res.redirect(authUrl);
   } catch (err) {
-    console.error("❌  Error initiating Google OAuth:", err.message);
+    console.error("Error initiating Google OAuth:", err.message);
     res.redirect(`${CLIENT_URL}/login?error=google_auth_failed`);
   }
 });
@@ -128,31 +113,17 @@ router.get("/google", (_req, res) => {
 //  ID token, finds/creates the user, and redirects to the frontend.
 // ════════════════════════════════════════════════════════════════════
 router.get("/google/callback", async (req, res, next) => {
-  const { code, state, error: oauthError } = req.query;
+  const { code, error: oauthError } = req.query;
 
-  // ── 1. Handle user denial or Google errors ────────────────────
   if (oauthError) {
-    console.warn("⚠️  Google OAuth error:", oauthError);
+    console.warn("Google OAuth error:", oauthError);
     return res.redirect(`${CLIENT_URL}/login?error=google_auth_failed`);
   }
 
-  // ── 2. Validate the authorization code is present ─────────────
   if (!code) {
-    console.warn("⚠️  No authorization code received from Google");
+    console.warn("No authorization code received from Google");
     return res.redirect(`${CLIENT_URL}/login?error=google_auth_failed`);
   }
-
-  // ── 3. CSRF: Validate state parameter against the cookie ──────
-  const storedState = req.cookies?.oauth_state;
-  if (!state || !storedState || state !== storedState) {
-    console.warn("⚠️  OAuth state mismatch — possible CSRF attack");
-    // Clear the stale cookie
-    res.clearCookie("oauth_state", { path: "/" });
-    return res.redirect(`${CLIENT_URL}/login?error=google_auth_failed`);
-  }
-
-  // Clear the state cookie — it's single-use
-  res.clearCookie("oauth_state", { path: "/" });
 
   try {
     // ── 4. Exchange the authorization code for tokens ────────────
