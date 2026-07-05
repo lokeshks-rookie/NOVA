@@ -123,7 +123,7 @@ export default function LoginPage() {
     // On success, the callback /api/auth/google/callback sets the JWT and
     // redirects the browser to /dashboard.
     // NAVIGATION → /api/auth/google → Google consent → /dashboard
-    window.location.href = "/api/auth/google";
+    window.location.href = `${import.meta.env.VITE_API_BASE_URL}/api/auth/google`;
   };
 
   // ════════════════════════════════════════════════════════════════
