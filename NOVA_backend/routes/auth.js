@@ -307,6 +307,7 @@ router.post("/signup", authLimiter, async (req, res, next) => {
     res.status(201).json({ success: true, token, user: userPayload });
   } catch (error) {
     console.error("❌  Signup error:", error.message);
+    console.error(error.stack);
     next(error);
   }
 });

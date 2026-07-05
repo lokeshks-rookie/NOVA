@@ -3,7 +3,8 @@
 
 // eslint-disable-next-line no-unused-vars
 const errorHandler = (err, _req, res, _next) => {
-  console.error("❌ Error:", err.message);
+  console.error("🔥 GLOBAL ERROR STACK:");
+  console.error(err.stack);
 
   // Mongoose validation error
   if (err.name === "ValidationError") {
